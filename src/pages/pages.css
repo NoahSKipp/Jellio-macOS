@@ -1,0 +1,115 @@
+:root {
+  color-scheme: dark;
+  --bg: #141414;
+  --surface: #1e1f26;
+  --border: rgba(255, 255, 255, 0.1);
+  --text: #f4f4f6;
+  --muted: #a3a5b1;
+  --accent: linear-gradient(135deg, #17a7dd 0%, #445ad5 45%, #b44ef4 100%);
+  --error: #ff7a85;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: radial-gradient(circle at 50% -10%, #1f2135 0%, var(--bg) 60%);
+  color: var(--text);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+main {
+  width: min(420px, calc(100% - 48px));
+  text-align: center;
+}
+
+.mark {
+  width: 104px;
+  height: 104px;
+  margin-bottom: 12px;
+}
+
+h1 {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+p {
+  color: var(--muted);
+  margin: 0 0 24px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+input:focus {
+  border-color: #6d63e6;
+  box-shadow: 0 0 0 3px rgba(109, 99, 230, 0.3);
+}
+
+button {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+  background: var(--accent);
+}
+
+button.secondary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.error {
+  color: var(--error);
+  min-height: 1.5em;
+  margin: 0;
+}
+
+.hint {
+  font-size: 13px;
+  margin: 16px 0 0;
+}

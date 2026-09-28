@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'" />
+    <title>Jellio</title>
+    <link rel="stylesheet" href="pages.css" />
+  </head>
+  <body>
+    <main>
+      <img class="mark" src="mark.svg" alt="" />
+      <h1>Can’t reach your server</h1>
+      <p id="detail">Check your connection and try again.</p>
+      <div class="actions">
+        <button id="retry" type="button">Try Again</button>
+        <button id="change" class="secondary" type="button">Change Server</button>
+      </div>
+      <p class="hint">Once Jellio has opened on this Mac, your downloads work without the server.</p>
+    </main>
+    <script src="offline.js"></script>
+  </body>
+</html>

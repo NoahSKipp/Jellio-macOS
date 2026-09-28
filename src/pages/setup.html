@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'" />
+    <title>Jellio</title>
+    <link rel="stylesheet" href="pages.css" />
+  </head>
+  <body>
+    <main>
+      <img class="mark" src="mark.svg" alt="" />
+      <h1>Welcome to Jellio</h1>
+      <p>Enter the address of your Jellyfin server with the Jellio plugin.</p>
+      <form id="form">
+        <input id="server" type="text" placeholder="jellyfin.example.com" autocomplete="url" spellcheck="false" autofocus />
+        <p id="error" class="error" role="alert"></p>
+        <button id="connect" type="submit">Connect</button>
+      </form>
+      <p class="hint">The same address you open Jellyfin with in a browser.</p>
+    </main>
+    <script src="setup.js"></script>
+  </body>
+</html>
