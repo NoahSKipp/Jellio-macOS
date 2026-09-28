@@ -1,0 +1,66 @@
+{
+  "name": "jellio-macos",
+  "productName": "Jellio",
+  "version": "0.1.0",
+  "description": "Jellio for macOS: the Jellio Jellyfin client in its own app, with offline downloads.",
+  "main": "src/main.js",
+  "author": "Noah S. Kipp <kippnoahsamuel@gmail.com>",
+  "license": "GPL-3.0-only",
+  "homepage": "https://github.com/NoahSKipp/Jellio-macOS",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NoahSKipp/Jellio-macOS.git"
+  },
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/config.js && node --check src/updates.js && node --check scripts/adhoc-sign.js",
+    "dist": "electron-builder --mac --arm64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.noahskipp.jellio",
+    "productName": "Jellio",
+    "copyright": "Copyright © Noah S. Kipp",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "afterPack": "scripts/adhoc-sign.js",
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.entertainment",
+      "icon": "build/icon.png",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "minimumSystemVersion": "12.0",
+      "darkModeSupport": true,
+      "artifactName": "Jellio-${version}-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "Jellio ${version}",
+      "writeUpdateInfo": false
+    }
+  }
+}
