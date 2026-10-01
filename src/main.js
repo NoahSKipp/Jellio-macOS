@@ -12,7 +12,7 @@ const {
   shell,
 } = require('electron');
 const config = require('./config');
-const { checkForUpdates } = require('./updates');
+const updates = require('./updates');
 
 const HOME_ROUTES = {
   home: '#/home',
@@ -298,6 +298,23 @@ ipcMain.on('jellio:change-server', (event) => {
   if (fromAppPage(event)) loadSetup();
 });
 
+function fromServerPage(event) {
+  return win && event.sender === win.webContents && isServerUrl(event.senderFrame.url);
+}
+
+// Jellio's Settings > About (the plugin) shows and drives updates.
+ipcMain.handle('jellio:update-state', (event) => (fromServerPage(event) ? updates.getState() : null));
+ipcMain.handle('jellio:update-check', (event) => (fromServerPage(event) ? updates.checkForUpdates(win, 'settings') : null));
+ipcMain.handle('jellio:update-automatic', (event, on) => (fromServerPage(event) ? updates.setAutomatic(on) : null));
+ipcMain.handle('jellio:update-install', (event) => {
+  if (fromServerPage(event)) updates.installUpdate(win);
+  return null;
+});
+
+updates.onChange((snapshot) => {
+  if (win && !win.isDestroyed() && isServerUrl(win.webContents.getURL())) win.webContents.send('jellio:update-state', snapshot);
+});
+
 ipcMain.on('jellio:downloads', (event, count) => {
   if (!win || event.sender !== win.webContents || !isServerUrl(event.senderFrame.url)) return;
   setActiveDownloads(Math.max(0, parseInt(count, 10) || 0));
@@ -310,7 +327,7 @@ function buildMenu() {
       label: app.name,
       submenu: [
         { role: 'about' },
-        { label: 'Check for Updates…', click: () => checkForUpdates(win, { quiet: false }) },
+        { label: 'Check for Updates…', click: () => updates.checkForUpdates(win, 'menu') },
         { type: 'separator' },
         { label: 'Settings…', accelerator: 'Cmd+,', click: () => go('settings') },
         { label: 'Change Server…', click: () => win && (win.show(), loadSetup()) },
@@ -418,5 +435,5 @@ app.whenReady().then(() => {
   });
   buildMenu();
   createWindow();
-  if (app.isPackaged) setTimeout(() => checkForUpdates(win, { quiet: true }), 10000);
+  if (app.isPackaged) updates.startAutomaticChecks(() => win);
 });

@@ -10,7 +10,19 @@ contextBridge.exposeInMainWorld('jellioNative', {
         retry: () => ipcRenderer.send('jellio:retry'),
         changeServer: () => ipcRenderer.send('jellio:change-server'),
       }
-    : {}),
+    : {
+        updates: {
+          getState: () => ipcRenderer.invoke('jellio:update-state'),
+          check: () => ipcRenderer.invoke('jellio:update-check'),
+          install: () => ipcRenderer.invoke('jellio:update-install'),
+          setAutomatic: (on) => ipcRenderer.invoke('jellio:update-automatic', !!on),
+          onChange: (listener) => {
+            const handler = (_event, snapshot) => listener(snapshot);
+            ipcRenderer.on('jellio:update-state', handler);
+            return () => ipcRenderer.removeListener('jellio:update-state', handler);
+          },
+        },
+      }),
 });
 
 // Counts Jellio's running downloads (runtime/offline.js keeps them in
