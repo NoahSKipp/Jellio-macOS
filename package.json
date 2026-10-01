@@ -1,7 +1,7 @@
 {
   "name": "jellio-macos",
   "productName": "Jellio",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Jellio for macOS: the Jellio Jellyfin client in its own app, with offline downloads.",
   "main": "src/main.js",
   "author": "Noah S. Kipp <kippnoahsamuel@gmail.com>",
