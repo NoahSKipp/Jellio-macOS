@@ -58,7 +58,7 @@ Same hard rules as `NoahSKipp/Jellio-Plugin`, unchanged:
 src/main.js       window, menu, navigation rules, server setup, quit guard
 src/preload.js    jellioNative bridge, download count from IndexedDB
 src/config.js     settings JSON in userData
-src/updates.js    GitHub latest-release check
+src/updates.js    update check, download and install from GitHub releases
 src/pages/        setup and offline pages
 scripts/          ad hoc signing (afterPack)
 build/icon.png    app icon, rendered from the plugin's jellio mark
@@ -68,7 +68,11 @@ build/icon.png    app icon, rendered from the plugin's jellio mark
 
 Apple Silicon only (`arm64`), macOS 12 and later; Sequoia must keep
 working. No Developer ID: builds are signed ad hoc and not notarized, so
-there is no Squirrel auto-update, only a check that links to the release.
+there is no Squirrel auto-update. `updates.js` does it by hand instead: it
+downloads the release's arm64 zip, checks its sha256, unpacks it with
+`ditto` and swaps the bundle once the app has quit. That only works from a
+writable location (Applications), not a disk image or a translocated copy.
+The plugin's Settings > About drives it through `jellioNative.updates`.
 
 ## Release automation
 
