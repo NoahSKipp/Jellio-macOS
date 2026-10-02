@@ -33,6 +33,9 @@ if (!app.requestSingleInstanceLock()) {
 
 nativeTheme.themeSource = 'dark';
 
+// Downloads come as HEVC when the server can encode it; macOS decodes it.
+app.commandLine.appendSwitch('enable-features', 'PlatformHEVCDecoderSupport');
+
 function serverUrl() {
   return config.get('serverUrl') || null;
 }
