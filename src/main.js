@@ -3,6 +3,7 @@ const {
   app,
   BrowserWindow,
   Menu,
+  Notification,
   dialog,
   ipcMain,
   nativeTheme,
@@ -35,6 +36,10 @@ nativeTheme.themeSource = 'dark';
 
 // Downloads come as HEVC when the server can encode it; macOS decodes it.
 app.commandLine.appendSwitch('enable-features', 'PlatformHEVCDecoderSupport');
+if (process.platform === 'darwin' && process.arch === 'arm64') {
+  app.commandLine.appendSwitch('enable-zero-copy');
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+}
 
 function serverUrl() {
   return config.get('serverUrl') || null;
@@ -86,7 +91,18 @@ function go(route) {
     loadServer();
     return;
   }
-  win.webContents.executeJavaScript('location.hash = ' + JSON.stringify(HOME_ROUTES[route]) + ';').catch(() => {});
+  const hash = HOME_ROUTES[route];
+  win.webContents
+    .executeJavaScript(
+      '((window.Emby && window.Emby.Page && typeof window.Emby.Page.show === "function") ' +
+        '? window.Emby.Page.show(' +
+        JSON.stringify(hash) +
+        ') ' +
+        ': (location.hash = ' +
+        JSON.stringify(hash) +
+        '));',
+    )
+    .catch(() => {});
 }
 
 function savedBounds() {
@@ -211,10 +227,32 @@ function createWindow() {
     callback(isServerUrl(details.requestingUrl || webContents.getURL()) && allowed.includes(permission));
   });
 
+  const ua = contents.getUserAgent();
+  if (!ua.includes('jellio-macOS')) contents.setUserAgent(ua + ' jellio-macOS/' + app.getVersion());
+
+  contents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+    const headers = details.requestHeaders;
+    if (isServerUrl(details.url)) {
+      for (const name of Object.keys(headers)) {
+        if (/^(authorization|x-emby-authorization)$/i.test(name)) {
+          let val = headers[name];
+          if (/MediaBrowser\s+/i.test(val)) {
+            val = /Device=/i.test(val)
+              ? val.replace(/Device=(?:"[^"]*"|[^,]+)/i, 'Device="jellio-macOS"')
+              : val.replace(/MediaBrowser\s+/i, 'MediaBrowser Device="jellio-macOS", ');
+            headers[name] = val;
+          }
+        }
+      }
+    }
+    callback({ requestHeaders: headers });
+  });
+
   loadServer();
 }
 
 function setActiveDownloads(count) {
+  const previous = activeDownloads;
   activeDownloads = count;
   if (app.dock) app.dock.setBadge(count ? String(count) : '');
   if (count && blockerId === null) {
@@ -222,6 +260,12 @@ function setActiveDownloads(count) {
   } else if (!count && blockerId !== null) {
     powerSaveBlocker.stop(blockerId);
     blockerId = null;
+  }
+  if (previous > 0 && count === 0) {
+    if (app.dock) app.dock.bounce('informational');
+    if (Notification.isSupported() && (!win || !win.isFocused())) {
+      new Notification({ title: 'Jellio', body: 'All downloads have finished.' }).show();
+    }
   }
 }
 
@@ -394,6 +438,18 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+function buildDockMenu() {
+  if (!app.dock) return;
+  const template = [
+    { label: 'Home', click: () => go('home') },
+    { label: 'Search', click: () => go('search') },
+    { label: 'Downloads', click: () => go('downloads') },
+    { type: 'separator' },
+    { label: 'Settings…', click: () => go('settings') },
+  ];
+  app.dock.setMenu(Menu.buildFromTemplate(template));
+}
+
 app.on('second-instance', () => {
   if (!win) return;
   if (win.isMinimized()) win.restore();
@@ -437,6 +493,7 @@ app.whenReady().then(() => {
     website: 'https://github.com/NoahSKipp/Jellio-macOS',
   });
   buildMenu();
+  buildDockMenu();
   createWindow();
   if (app.isPackaged) updates.startAutomaticChecks(() => win);
 });
