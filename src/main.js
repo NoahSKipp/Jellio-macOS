@@ -133,7 +133,6 @@ function createWindow() {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
-      backgroundThrottling: false,
       autoplayPolicy: 'no-user-gesture-required',
       spellcheck: true,
     },
@@ -230,24 +229,6 @@ function createWindow() {
   const ua = contents.getUserAgent();
   if (!ua.includes('jellio-macOS')) contents.setUserAgent(ua + ' jellio-macOS/' + app.getVersion());
 
-  contents.session.webRequest.onBeforeSendHeaders((details, callback) => {
-    const headers = details.requestHeaders;
-    if (isServerUrl(details.url)) {
-      for (const name of Object.keys(headers)) {
-        if (/^(authorization|x-emby-authorization)$/i.test(name)) {
-          let val = headers[name];
-          if (/MediaBrowser\s+/i.test(val)) {
-            val = /Device=/i.test(val)
-              ? val.replace(/Device=(?:"[^"]*"|[^,]+)/i, 'Device="jellio-macOS"')
-              : val.replace(/MediaBrowser\s+/i, 'MediaBrowser Device="jellio-macOS", ');
-            headers[name] = val;
-          }
-        }
-      }
-    }
-    callback({ requestHeaders: headers });
-  });
-
   loadServer();
 }
 
@@ -255,6 +236,8 @@ function setActiveDownloads(count) {
   const previous = activeDownloads;
   activeDownloads = count;
   if (app.dock) app.dock.setBadge(count ? String(count) : '');
+  // Throttled like any hidden tab unless a download needs the page running.
+  if (win && !win.isDestroyed()) win.webContents.setBackgroundThrottling(count === 0);
   if (count && blockerId === null) {
     blockerId = powerSaveBlocker.start('prevent-app-suspension');
   } else if (!count && blockerId !== null) {
