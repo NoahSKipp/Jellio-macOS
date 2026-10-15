@@ -14,7 +14,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/config.js && node --check src/updates.js && node --check scripts/adhoc-sign.js",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/config.js && node --check src/updates.js && node --check src/changelogData.js && node --check src/pages/whatsnew.js && node --check scripts/adhoc-sign.js",
     "dist": "electron-builder --mac --arm64 --publish never"
   },
   "devDependencies": {

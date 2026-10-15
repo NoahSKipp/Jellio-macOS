@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'" />
+    <title>What's New in Jellio</title>
+    <link rel="stylesheet" href="pages.css" />
+    <style>
+      body {
+        align-items: flex-start;
+        padding: 24px;
+        box-sizing: border-box;
+      }
+      main.whatsnew-main {
+        width: 100%;
+        max-width: 520px;
+        margin: auto;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 48px);
+      }
+      .whatsnew-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+      .whatsnew-header img.mark {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 0;
+      }
+      .whatsnew-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .whatsnew-subtitle {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 2px 0 0;
+      }
+      .whatsnew-scroll {
+        overflow-y: auto;
+        padding-right: 6px;
+        flex: 1;
+        margin-bottom: 18px;
+      }
+      .changelog-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .changelog-item {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+      }
+      .changelog-item-title {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 3px;
+        color: var(--text);
+      }
+      .changelog-item-desc {
+        font-size: 13px;
+        line-height: 1.4;
+        color: var(--muted);
+      }
+      .prev-wrap {
+        margin-top: 14px;
+      }
+      .sub-expander {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 14px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .sub-expander:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+      }
+      .sub-arrow {
+        transition: transform 0.2s ease;
+        font-size: 12px;
+      }
+      .sub-arrow.expanded {
+        transform: rotate(90deg);
+      }
+      .prev-body {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .version-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .version-header {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: transparent;
+        border: 0;
+        padding: 8px 12px;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .version-header:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .version-content {
+        padding: 0 12px 10px;
+      }
+      .actions-footer {
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+      }
+      .actions-footer button {
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="whatsnew-main">
+      <div class="whatsnew-header">
+        <img class="mark" src="mark.svg" alt="" />
+        <div>
+          <h1 class="whatsnew-title" id="title">What's New in Jellio</h1>
+          <div class="whatsnew-subtitle" id="subtitle">Version</div>
+        </div>
+      </div>
+      <div class="whatsnew-scroll">
+        <div class="changelog-list" id="latest-highlights"></div>
+        <div class="prev-wrap" id="prev-wrap" style="display: none;">
+          <button type="button" class="sub-expander" id="prev-toggle">
+            <span id="prev-label">Previous Versions</span>
+            <span class="sub-arrow" id="prev-arrow">▶</span>
+          </button>
+          <div class="prev-body" id="prev-body" style="display: none;"></div>
+        </div>
+      </div>
+      <div class="actions-footer">
+        <button id="dismiss" type="button">Continue</button>
+      </div>
+    </main>
+    <script src="whatsnew.js"></script>
+  </body>
+</html>

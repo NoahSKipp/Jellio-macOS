@@ -15,6 +15,7 @@ const {
 } = require('electron');
 const config = require('./config');
 const updates = require('./updates');
+const { isBigRelease, MACOS_CHANGELOG_RELEASES } = require('./changelogData');
 
 const HOME_ROUTES = {
   home: '#/home',
@@ -24,6 +25,45 @@ const HOME_ROUTES = {
 };
 
 let win = null;
+let whatsNewWin = null;
+
+function showWhatsNewWindow() {
+  if (whatsNewWin && !whatsNewWin.isDestroyed()) {
+    whatsNewWin.show();
+    whatsNewWin.focus();
+    return;
+  }
+  whatsNewWin = new BrowserWindow({
+    width: 580,
+    height: 640,
+    minWidth: 480,
+    minHeight: 500,
+    title: "What's New in Jellio",
+    parent: win && !win.isDestroyed() ? win : null,
+    show: false,
+    backgroundColor: '#141414',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  whatsNewWin.loadFile(path.join(__dirname, 'pages', 'whatsnew.html'));
+  whatsNewWin.once('ready-to-show', () => {
+    whatsNewWin.show();
+  });
+}
+
+function shouldShowWhatsNewOnStartup() {
+  const version = app.getVersion();
+  if (!isBigRelease(version)) return false;
+  const lastSeen = config.get('lastSeenChangelogVersion');
+  if (lastSeen && lastSeen !== version) {
+    config.set('lastSeenChangelogVersion', null);
+    return true;
+  }
+  return !lastSeen;
+}
 let quitting = false;
 let quitConfirmed = false;
 let activeDownloads = 0;
@@ -342,6 +382,14 @@ ipcMain.on('jellio:change-server', (event) => {
   if (fromAppPage(event)) loadSetup();
 });
 
+ipcMain.handle('jellio:get-changelogs', () => MACOS_CHANGELOG_RELEASES);
+ipcMain.on('jellio:dismiss-whatsnew', () => {
+  config.set('lastSeenChangelogVersion', app.getVersion());
+  if (whatsNewWin && !whatsNewWin.isDestroyed()) {
+    whatsNewWin.close();
+  }
+});
+
 function fromServerPage(event) {
   return win && event.sender === win.webContents && isServerUrl(event.senderFrame.url);
 }
@@ -400,6 +448,7 @@ function buildMenu() {
       label: app.name,
       submenu: [
         { role: 'about' },
+        { label: "What's New in Jellio…", click: () => showWhatsNewWindow() },
         { label: 'Check for Updates…', click: () => updates.checkForUpdates(win, 'menu') },
         { type: 'separator' },
         { label: 'Settings…', accelerator: 'Cmd+,', click: () => go('settings') },
@@ -453,6 +502,7 @@ function buildMenu() {
     {
       role: 'help',
       submenu: [
+        { label: "What's New in Jellio…", click: () => showWhatsNewWindow() },
         { label: 'Jellio on GitHub', click: () => shell.openExternal('https://github.com/NoahSKipp/Jellio-macOS') },
         {
           label: 'Report an Issue',
@@ -522,6 +572,9 @@ app.whenReady().then(() => {
   buildDockMenu();
   createWindow();
   registerMediaShortcuts();
+  if (shouldShowWhatsNewOnStartup()) {
+    showWhatsNewWindow();
+  }
   if (app.isPackaged) updates.startAutomaticChecks(() => win);
 });
 

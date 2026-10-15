@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('jellioNative', {
         connect: (url) => ipcRenderer.invoke('jellio:connect', url),
         retry: () => ipcRenderer.send('jellio:retry'),
         changeServer: () => ipcRenderer.send('jellio:change-server'),
+        dismissWhatsNew: () => ipcRenderer.send('jellio:dismiss-whatsnew'),
+        getChangelogs: () => ipcRenderer.invoke('jellio:get-changelogs'),
       }
     : {
         updates: {
