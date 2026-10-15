@@ -5,6 +5,7 @@ const {
   Menu,
   Notification,
   dialog,
+  globalShortcut,
   ipcMain,
   nativeTheme,
   net,
@@ -27,6 +28,7 @@ let quitting = false;
 let quitConfirmed = false;
 let activeDownloads = 0;
 let blockerId = null;
+let playbackBlockerId = null;
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -34,8 +36,9 @@ if (!app.requestSingleInstanceLock()) {
 
 nativeTheme.themeSource = 'dark';
 
-// Downloads come as HEVC when the server can encode it; macOS decodes it.
-app.commandLine.appendSwitch('enable-features', 'PlatformHEVCDecoderSupport');
+// Hardware video decoding and Apple Silicon acceleration flags.
+app.commandLine.appendSwitch('enable-features', 'PlatformHEVCDecoderSupport,VaapiVideoDecoder,AudioServiceOutOfProcess');
+app.commandLine.appendSwitch('enable-accelerated-video-decode');
 if (process.platform === 'darwin' && process.arch === 'arm64') {
   app.commandLine.appendSwitch('enable-zero-copy');
   app.commandLine.appendSwitch('enable-gpu-rasterization');
@@ -252,6 +255,17 @@ function setActiveDownloads(count) {
   }
 }
 
+function setPlaybackActiveState(active) {
+  if (active && playbackBlockerId === null) {
+    playbackBlockerId = powerSaveBlocker.start('prevent-display-sleep');
+  } else if (!active && playbackBlockerId !== null) {
+    if (powerSaveBlocker.isStarted(playbackBlockerId)) {
+      powerSaveBlocker.stop(playbackBlockerId);
+    }
+    playbackBlockerId = null;
+  }
+}
+
 function withScheme(input) {
   return /^[a-z][a-z0-9+.-]*:\/\//i.test(input) ? [input] : ['https://' + input, 'http://' + input];
 }
@@ -349,6 +363,35 @@ ipcMain.on('jellio:downloads', (event, count) => {
   if (!win || event.sender !== win.webContents || !isServerUrl(event.senderFrame.url)) return;
   setActiveDownloads(Math.max(0, parseInt(count, 10) || 0));
 });
+
+ipcMain.on('jellio:playback-state', (event, active) => {
+  if (!win || event.sender !== win.webContents || !isServerUrl(event.senderFrame.url)) return;
+  setPlaybackActiveState(!!active);
+});
+
+function sendMediaAction(action) {
+  if (!win || win.isDestroyed()) return;
+  win.webContents
+    .executeJavaScript(
+      '((action) => {' +
+        '  const ev = new KeyboardEvent("keydown", { key: action, bubbles: true, cancelable: true });' +
+        '  document.dispatchEvent(ev);' +
+        '})(' +
+        JSON.stringify(action) +
+        ')'
+    )
+    .catch(() => {});
+}
+
+function registerMediaShortcuts() {
+  try {
+    globalShortcut.register('MediaPlayPause', () => sendMediaAction('MediaPlayPause'));
+    globalShortcut.register('MediaNextTrack', () => sendMediaAction('MediaNextTrack'));
+    globalShortcut.register('MediaPreviousTrack', () => sendMediaAction('MediaPreviousTrack'));
+  } catch (err) {
+    console.warn('Jellio: could not register global media shortcuts', err);
+  }
+}
 
 function buildMenu() {
   const history = () => win && win.webContents.navigationHistory;
@@ -478,5 +521,11 @@ app.whenReady().then(() => {
   buildMenu();
   buildDockMenu();
   createWindow();
+  registerMediaShortcuts();
   if (app.isPackaged) updates.startAutomaticChecks(() => win);
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+  setPlaybackActiveState(false);
 });

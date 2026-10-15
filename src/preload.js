@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('jellioNative', {
             return () => ipcRenderer.removeListener('jellio:update-state', handler);
           },
         },
+        setPlaybackState: (playing) => ipcRenderer.send('jellio:playback-state', !!playing),
       }),
 });
 
