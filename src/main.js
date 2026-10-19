@@ -11,6 +11,7 @@ const {
   net,
   powerSaveBlocker,
   screen,
+  session,
   shell,
 } = require('electron');
 const config = require('./config');
@@ -570,6 +571,8 @@ app.whenReady().then(() => {
   });
   buildMenu();
   buildDockMenu();
+  const server = serverUrl();
+  if (server) session.defaultSession.preconnect({ url: server, numSockets: 4 });
   createWindow();
   registerMediaShortcuts();
   if (shouldShowWhatsNewOnStartup()) {
