@@ -16,6 +16,18 @@ function isBigRelease(version) {
 
 const MACOS_CHANGELOG_RELEASES = [
   {
+    version: '0.6.2',
+    title: "What's New in Jellio for macOS",
+    subtitle: 'Version 0.6.2',
+    summary: 'Jellyfin now shows the right app and version for this Mac.',
+    highlights: [
+      {
+        title: 'Correct Version in Jellyfin',
+        description: "Jellyfin's Devices and Dashboard now list this Mac as Jellio for macOS with the app's real version, instead of Jellio 0.1.0. Needs Jellio 1.86.2 on your server.",
+      },
+    ],
+  },
+  {
     version: '0.6.1',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.6.1',
