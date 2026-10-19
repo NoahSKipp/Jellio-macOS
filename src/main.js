@@ -181,8 +181,8 @@ function createWindow() {
     },
   });
   if (config.get('maximized')) win.maximize();
-
-  win.once('ready-to-show', () => win.show());
+  // Shown right away like a browser tab, not after the server's first paint.
+  win.show();
 
   let saveTimer = null;
   const saveBounds = () => {
