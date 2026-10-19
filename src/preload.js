@@ -82,6 +82,7 @@ if (!appPage && /^https?:$/.test(location.protocol)) {
       ipcRenderer.send('jellio:downloads', count);
     }
   };
-  window.addEventListener('DOMContentLoaded', tick);
+  // First count after startup, so it doesn't compete with the page loading.
+  setTimeout(tick, 5000);
   setInterval(tick, 4000);
 }
