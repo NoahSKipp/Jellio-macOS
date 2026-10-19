@@ -384,6 +384,10 @@ ipcMain.on('jellio:change-server', (event) => {
 });
 
 ipcMain.handle('jellio:get-changelogs', () => MACOS_CHANGELOG_RELEASES);
+// Sent to Jellyfin as this client's version, so Devices shows the app's own.
+ipcMain.on('jellio:app-version', (event) => {
+  event.returnValue = app.getVersion();
+});
 ipcMain.on('jellio:dismiss-whatsnew', () => {
   config.set('lastSeenChangelogVersion', app.getVersion());
   if (whatsNewWin && !whatsNewWin.isDestroyed()) {

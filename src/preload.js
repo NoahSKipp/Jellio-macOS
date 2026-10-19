@@ -5,6 +5,7 @@ const appPage = location.protocol === 'file:';
 contextBridge.exposeInMainWorld('jellioNative', {
   platform: 'macos',
   deviceName: 'jellio-macOS',
+  appVersion: ipcRenderer.sendSync('jellio:app-version'),
   ...(appPage
     ? {
         connect: (url) => ipcRenderer.invoke('jellio:connect', url),
