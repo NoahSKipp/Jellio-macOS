@@ -19,8 +19,28 @@ const MACOS_CHANGELOG_RELEASES = [
     version: '0.6.2',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.6.2',
-    summary: 'Jellyfin now shows the right app and version for this Mac.',
+    summary: 'Native macOS playback menu, menu bar status item, deep linking, Dock progress bar, and atomic configuration.',
     highlights: [
+      {
+        title: 'Native Playback Menu',
+        description: 'Standard macOS Playback menu with shortcuts for play/pause, next/previous tracks, 10-second seek, volume adjustments, and Picture-in-Picture.',
+      },
+      {
+        title: 'Menu Bar Status Item',
+        description: 'System tray icon with live playback controls, current media title, active downloads count, and quick window toggle.',
+      },
+      {
+        title: 'Deep Linking Support',
+        description: 'Launch and navigate directly via jellio:// and jellyfin:// protocol links.',
+      },
+      {
+        title: 'Dock & Window Progress Bar',
+        description: 'Live progress indication on the macOS Dock tile and window during downloads and in-app updates.',
+      },
+      {
+        title: 'Atomic Settings & Safe Updates',
+        description: 'Crash-resilient configuration writes with corrupted file backup recovery, and automatic temporary directory cleanup during updates.',
+      },
       {
         title: 'Correct Version in Jellyfin',
         description: "Jellyfin's Devices and Dashboard now list this Mac as Jellio for macOS with the app's real version, instead of Jellio 0.1.0. Needs Jellio 1.86.2 on your server.",

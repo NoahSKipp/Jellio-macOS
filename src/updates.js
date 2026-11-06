@@ -219,29 +219,40 @@ async function installUpdate(window) {
       return;
     }
 
-    const work = fs.mkdtempSync(path.join(os.tmpdir(), 'jellio-update-'));
-    const zip = path.join(work, asset.name);
-    setState({ status: 'downloading', latest: version, progress: 0 });
-    const actual = await download(asset, zip, version);
-    const expected = await expectedChecksum(found, asset).catch(() => null);
-    if (expected && expected !== actual) throw new Error('The download didn’t match its checksum.');
+    let work = null;
+    let handedOff = false;
+    try {
+      work = fs.mkdtempSync(path.join(os.tmpdir(), 'jellio-update-'));
+      const zip = path.join(work, asset.name);
+      setState({ status: 'downloading', latest: version, progress: 0 });
+      const actual = await download(asset, zip, version);
+      const expected = await expectedChecksum(found, asset).catch(() => null);
+      if (expected && expected !== actual) throw new Error('The download didn’t match its checksum.');
 
-    setState({ status: 'installing', latest: version });
-    const unpacked = path.join(work, 'unpacked');
-    await run('ditto', ['-x', '-k', zip, unpacked]);
-    const fresh = path.join(unpacked, path.basename(bundle));
-    const candidate = fs.existsSync(fresh) ? fresh : path.join(unpacked, 'Jellio.app');
-    if (!fs.existsSync(candidate)) throw new Error('The download has no Jellio app in it.');
-    await run('xattr', ['-cr', candidate]).catch(() => null);
-    await run('codesign', ['--verify', '--deep', candidate]);
+      setState({ status: 'installing', latest: version });
+      const unpacked = path.join(work, 'unpacked');
+      await run('ditto', ['-x', '-k', zip, unpacked]);
+      const fresh = path.join(unpacked, path.basename(bundle));
+      const candidate = fs.existsSync(fresh) ? fresh : path.join(unpacked, 'Jellio.app');
+      if (!fs.existsSync(candidate)) throw new Error('The download has no Jellio app in it.');
+      await run('xattr', ['-cr', candidate]).catch(() => null);
+      await run('codesign', ['--verify', '--deep', candidate]);
 
-    setState({ status: 'restarting', latest: version });
-    const child = spawn('/bin/bash', ['-c', SWAP_SCRIPT, 'jellio-update', String(process.pid), bundle, candidate, work], {
-      detached: true,
-      stdio: 'ignore',
-    });
-    child.unref();
-    app.quit();
+      setState({ status: 'restarting', latest: version });
+      const child = spawn('/bin/bash', ['-c', SWAP_SCRIPT, 'jellio-update', String(process.pid), bundle, candidate, work], {
+        detached: true,
+        stdio: 'ignore',
+      });
+      child.unref();
+      handedOff = true;
+      app.quit();
+    } finally {
+      if (work && !handedOff) {
+        try {
+          fs.rmSync(work, { recursive: true, force: true });
+        } catch {}
+      }
+    }
   })()
     .catch((err) => {
       setState({ status: 'error', error: 'Couldn’t install the update: ' + String(err.message || err) });
