@@ -16,9 +16,9 @@ function isBigRelease(version) {
 
 const MACOS_CHANGELOG_RELEASES = [
   {
-    version: '0.6.2',
+    version: '0.7.0',
     title: "What's New in Jellio for macOS",
-    subtitle: 'Version 0.6.2',
+    subtitle: 'Version 0.7.0',
     summary: 'Native macOS playback menu, menu bar status item, deep linking, Dock progress bar, and atomic configuration.',
     highlights: [
       {
