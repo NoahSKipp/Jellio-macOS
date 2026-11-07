@@ -6,13 +6,66 @@ const file = () => path.join(app.getPath('userData'), 'config.json');
 
 let data = null;
 
+function isPlainObject(v) {
+  return Boolean(v && typeof v === 'object' && !Array.isArray(v));
+}
+
+function recoverFromTempFiles(filePath) {
+  let recovered = null;
+  try {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) return null;
+    const base = path.basename(filePath);
+    const candidates = fs
+      .readdirSync(dir)
+      .filter((f) => f.startsWith(base) && f.endsWith('.tmp'))
+      .map((f) => path.join(dir, f));
+    candidates.sort((a, b) => {
+      try {
+        return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs;
+      } catch {
+        return 0;
+      }
+    });
+    for (const cand of candidates) {
+      try {
+        const candRaw = fs.readFileSync(cand, 'utf8');
+        const parsed = JSON.parse(candRaw);
+        if (isPlainObject(parsed)) {
+          recovered = parsed;
+          break;
+        }
+      } catch {}
+    }
+    if (recovered) {
+      try {
+        const tempPath = filePath + '.' + process.pid + '.tmp';
+        fs.writeFileSync(tempPath, JSON.stringify(recovered, null, 2), 'utf8');
+        fs.renameSync(tempPath, filePath);
+        for (const cand of candidates) {
+          try {
+            if (fs.existsSync(cand)) fs.unlinkSync(cand);
+          } catch {}
+        }
+      } catch (err) {
+        console.warn('Jellio: could not persist recovered config', err);
+      }
+    }
+  } catch {}
+  return recovered;
+}
+
 function load() {
   if (data) return data;
   const filePath = file();
   if (fs.existsSync(filePath)) {
     try {
       const raw = fs.readFileSync(filePath, 'utf8');
-      data = JSON.parse(raw) || {};
+      const parsed = JSON.parse(raw);
+      if (!isPlainObject(parsed)) {
+        throw new Error('Config root is not a JSON object');
+      }
+      data = parsed;
     } catch (err) {
       console.warn('Jellio: config.json corrupted, backing up', err);
       try {
@@ -21,41 +74,10 @@ function load() {
       } catch (backupErr) {
         console.warn('Jellio: could not backup corrupted config', backupErr);
       }
-      data = null;
-      // Check if a valid .tmp file exists before falling back to {}
-      try {
-        const dir = path.dirname(filePath);
-        if (fs.existsSync(dir)) {
-          const base = path.basename(filePath);
-          const candidates = fs
-            .readdirSync(dir)
-            .filter((f) => f.startsWith(base) && f.endsWith('.tmp'))
-            .map((f) => path.join(dir, f));
-          candidates.sort((a, b) => {
-            try {
-              return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs;
-            } catch {
-              return 0;
-            }
-          });
-          for (const cand of candidates) {
-            try {
-              const candRaw = fs.readFileSync(cand, 'utf8');
-              const parsed = JSON.parse(candRaw);
-              if (parsed && typeof parsed === 'object') {
-                data = parsed;
-                break;
-              }
-            } catch {}
-          }
-        }
-      } catch {}
-      if (!data) {
-        data = {};
-      }
+      data = recoverFromTempFiles(filePath) || {};
     }
   } else {
-    data = {};
+    data = recoverFromTempFiles(filePath) || {};
   }
   return data;
 }

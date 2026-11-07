@@ -19,8 +19,8 @@ jobs:
 
       - name: Configure git
         run: |
-          git config user.name "${{ github.repository_owner }}"
-          git config user.email "${{ github.event.pusher.email || format('{0}@users.noreply.github.com', github.repository_owner) }}"
+          git config user.name "NoahSKipp"
+          git config user.email "kippnoahsamuel@gmail.com"
 
       - name: Set up git-cliff
         uses: kenji-miyake/setup-git-cliff@v1

@@ -54,12 +54,21 @@ function showWhatsNewWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
+      sandbox: true,
       nodeIntegration: false,
     },
   });
   whatsNewWin.loadFile(path.join(__dirname, 'pages', 'whatsnew.html'));
   whatsNewWin.once('ready-to-show', () => {
-    whatsNewWin.show();
+    if (whatsNewWin && !whatsNewWin.isDestroyed()) {
+      whatsNewWin.show();
+    }
+  });
+  whatsNewWin.on('close', () => {
+    config.set('lastSeenChangelogVersion', app.getVersion());
+  });
+  whatsNewWin.on('closed', () => {
+    whatsNewWin = null;
   });
 }
 
@@ -128,10 +137,8 @@ function navigateRoute(route) {
   win.show();
   win.focus();
 
-  if (win.webContents.isLoading()) {
-    win.webContents.once('did-finish-load', () => {
-      win.webContents.send('jellio:navigate', route);
-    });
+  if (win.webContents.isLoading() || !isServerUrl(win.webContents.getURL())) {
+    pendingRoute = route;
   } else {
     win.webContents.send('jellio:navigate', route);
   }
@@ -181,6 +188,8 @@ function isAppPage(url) {
 }
 
 function loadSetup() {
+  setPlaybackActiveState(false);
+  setActiveDownloads(0);
   win.loadFile(path.join(__dirname, 'pages', 'setup.html'), {
     query: { server: serverUrl() || '' },
   });
@@ -193,6 +202,8 @@ function loadServer() {
 }
 
 function loadOffline(reason) {
+  setPlaybackActiveState(false);
+  setActiveDownloads(0);
   win.loadFile(path.join(__dirname, 'pages', 'offline.html'), {
     query: { server: serverUrl() || '', reason: reason || '' },
   });
@@ -270,7 +281,7 @@ function toggleWindowVisibility() {
 function updateTray() {
   if (!tray) return;
 
-  const isWinVisible = win && !win.isDestroyed() && win.isVisible() && win.isFocused();
+  const isWinVisible = Boolean(win && !win.isDestroyed() && win.isVisible());
   const mediaLabel = isPlaybackPlaying && currentMediaTitle ? currentMediaTitle : 'Nothing Playing';
   const downloadSummary =
     activeDownloads === 1
@@ -350,9 +361,6 @@ function createTray() {
   }
   tray = new Tray(icon);
   tray.setToolTip('Jellio');
-  tray.on('click', () => {
-    toggleWindowVisibility();
-  });
   updateTray();
 }
 
@@ -417,8 +425,8 @@ function createWindow() {
 
   const contents = win.webContents;
 
-  contents.once('did-finish-load', () => {
-    if (pendingRoute) {
+  contents.on('did-finish-load', () => {
+    if (pendingRoute && isServerUrl(contents.getURL())) {
       contents.send('jellio:navigate', pendingRoute);
       pendingRoute = null;
     }
@@ -444,9 +452,11 @@ function createWindow() {
   });
 
   contents.on('render-process-gone', (_event, details) => {
+    setPlaybackActiveState(false);
+    setActiveDownloads(0);
     if (details.reason === 'clean-exit') return;
     console.warn('Jellio: page crashed', details.reason);
-    setTimeout(() => win && loadServer(), 1000);
+    setTimeout(() => win && !win.isDestroyed() && loadServer(), 1000);
   });
 
   contents.on('context-menu', (_event, params) => {
@@ -514,22 +524,20 @@ function setActiveDownloads(count, progress) {
 
 function setPlaybackActiveState(active, title) {
   isPlaybackPlaying = !!active;
+  currentMediaTitle = active ? (title || null) : null;
   if (active) {
-    if (title && typeof title === 'string') {
-      currentMediaTitle = title;
+    registerMediaShortcuts();
+    if (playbackBlockerId === null) {
+      playbackBlockerId = powerSaveBlocker.start('prevent-display-sleep');
     }
   } else {
-    if (!title) {
-      currentMediaTitle = null;
+    unregisterMediaShortcuts();
+    if (playbackBlockerId !== null) {
+      if (powerSaveBlocker.isStarted(playbackBlockerId)) {
+        powerSaveBlocker.stop(playbackBlockerId);
+      }
+      playbackBlockerId = null;
     }
-  }
-  if (active && playbackBlockerId === null) {
-    playbackBlockerId = powerSaveBlocker.start('prevent-display-sleep');
-  } else if (!active && playbackBlockerId !== null) {
-    if (powerSaveBlocker.isStarted(playbackBlockerId)) {
-      powerSaveBlocker.stop(playbackBlockerId);
-    }
-    playbackBlockerId = null;
   }
   updateTray();
 }
@@ -610,12 +618,16 @@ ipcMain.on('jellio:change-server', (event) => {
   if (fromAppPage(event)) loadSetup();
 });
 
-ipcMain.handle('jellio:get-changelogs', () => MACOS_CHANGELOG_RELEASES);
+ipcMain.handle('jellio:get-changelogs', (event) => {
+  if (!event.senderFrame || !isAppPage(event.senderFrame.url)) return [];
+  return MACOS_CHANGELOG_RELEASES;
+});
 // Sent to Jellyfin as this client's version, so Devices shows the app's own.
 ipcMain.on('jellio:app-version', (event) => {
   event.returnValue = app.getVersion();
 });
-ipcMain.on('jellio:dismiss-whatsnew', () => {
+ipcMain.on('jellio:dismiss-whatsnew', (event) => {
+  if (!event.senderFrame || !isAppPage(event.senderFrame.url)) return;
   config.set('lastSeenChangelogVersion', app.getVersion());
   if (whatsNewWin && !whatsNewWin.isDestroyed()) {
     whatsNewWin.close();
@@ -683,8 +695,23 @@ function registerMediaShortcuts() {
   }
 }
 
+function unregisterMediaShortcuts() {
+  try {
+    globalShortcut.unregister('MediaPlayPause');
+    globalShortcut.unregister('MediaNextTrack');
+    globalShortcut.unregister('MediaPreviousTrack');
+  } catch (err) {
+    console.warn('Jellio: could not unregister global media shortcuts', err);
+  }
+}
+
 function buildMenu() {
-  const history = () => win && win.webContents.navigationHistory;
+  const history = () => win && !win.isDestroyed() && win.webContents.navigationHistory;
+  const sendPlayback = (command) => {
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('jellio:playback-command', command);
+    }
+  };
   const template = [
     {
       label: app.name,
@@ -694,7 +721,7 @@ function buildMenu() {
         { label: 'Check for Updates…', click: () => updates.checkForUpdates(win, 'menu') },
         { type: 'separator' },
         { label: 'Settings…', accelerator: 'Cmd+,', click: () => go('settings') },
-        { label: 'Change Server…', click: () => win && (win.show(), loadSetup()) },
+        { label: 'Change Server…', click: () => win && !win.isDestroyed() && (win.show(), loadSetup()) },
         { type: 'separator' },
         { role: 'services' },
         { type: 'separator' },
@@ -712,45 +739,45 @@ function buildMenu() {
         {
           label: 'Play / Pause',
           accelerator: 'Cmd+Alt+Down',
-          click: () => win && win.webContents.send('jellio:playback-command', 'play-pause'),
+          click: () => sendPlayback('play-pause'),
         },
         {
           label: 'Next',
-          accelerator: 'Cmd+Right',
-          click: () => win && win.webContents.send('jellio:playback-command', 'next'),
+          accelerator: 'Alt+Cmd+Right',
+          click: () => sendPlayback('next'),
         },
         {
           label: 'Previous',
-          accelerator: 'Cmd+Left',
-          click: () => win && win.webContents.send('jellio:playback-command', 'previous'),
+          accelerator: 'Alt+Cmd+Left',
+          click: () => sendPlayback('previous'),
         },
         { type: 'separator' },
         {
           label: 'Skip 10 Seconds Forward',
-          accelerator: 'Shift+Right',
-          click: () => win && win.webContents.send('jellio:playback-command', 'skip-forward'),
+          accelerator: 'Ctrl+Cmd+Right',
+          click: () => sendPlayback('skip-forward'),
         },
         {
           label: 'Skip 10 Seconds Back',
-          accelerator: 'Shift+Left',
-          click: () => win && win.webContents.send('jellio:playback-command', 'skip-backward'),
+          accelerator: 'Ctrl+Cmd+Left',
+          click: () => sendPlayback('skip-backward'),
         },
         { type: 'separator' },
         {
           label: 'Volume Up',
-          accelerator: 'Cmd+Up',
-          click: () => win && win.webContents.send('jellio:playback-command', 'volume-up'),
+          accelerator: 'Alt+Cmd+Up',
+          click: () => sendPlayback('volume-up'),
         },
         {
           label: 'Volume Down',
-          accelerator: 'Cmd+Down',
-          click: () => win && win.webContents.send('jellio:playback-command', 'volume-down'),
+          accelerator: 'Alt+Cmd+Down',
+          click: () => sendPlayback('volume-down'),
         },
         { type: 'separator' },
         {
           label: 'Toggle Picture-in-Picture',
           accelerator: 'Cmd+Shift+P',
-          click: () => win && win.webContents.send('jellio:playback-command', 'toggle-pip'),
+          click: () => sendPlayback('toggle-pip'),
         },
       ],
     },
@@ -817,7 +844,7 @@ function buildDockMenu() {
 }
 
 app.on('second-instance', (_event, argv) => {
-  if (!win) return;
+  if (!win || win.isDestroyed()) createWindow();
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
@@ -831,23 +858,23 @@ app.on('second-instance', (_event, argv) => {
 });
 
 app.on('activate', () => {
-  if (win) win.show();
+  if (win && !win.isDestroyed()) win.show();
   else createWindow();
 });
 
 app.on('before-quit', (event) => {
-  if (activeDownloads && !quitConfirmed) {
+  if (activeDownloads && !quitConfirmed && !updates.isInstalling()) {
     event.preventDefault();
-    if (win) win.show();
-    dialog
-      .showMessageBox(win, {
-        type: 'warning',
-        message: activeDownloads === 1 ? 'A download is still running' : activeDownloads + ' downloads are still running',
-        detail: 'If you quit now, they pick up again the next time you open Jellio.',
-        buttons: ['Quit', 'Cancel'],
-        defaultId: 1,
-        cancelId: 1,
-      })
+    if (win && !win.isDestroyed()) win.show();
+    const opts = {
+      type: 'warning',
+      message: activeDownloads === 1 ? 'A download is still running' : activeDownloads + ' downloads are still running',
+      detail: 'If you quit now, they pick up again the next time you open Jellio.',
+      buttons: ['Quit', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+    };
+    (win && !win.isDestroyed() ? dialog.showMessageBox(win, opts) : dialog.showMessageBox(opts))
       .then(({ response }) => {
         if (response !== 0) return;
         quitConfirmed = true;
@@ -871,7 +898,6 @@ app.whenReady().then(() => {
   const server = serverUrl();
   if (server) session.defaultSession.preconnect({ url: server, numSockets: 4 });
   createWindow();
-  registerMediaShortcuts();
   if (shouldShowWhatsNewOnStartup()) {
     showWhatsNewWindow();
   }

@@ -14,7 +14,7 @@ function getActiveMediaTitle() {
   } catch {}
   try {
     const el = document.querySelector(
-      '.jellio-offline-player-title, .jellio-mini-player-title, .videoPlayerTitle, .headerMediaTitle',
+      '.jellio-player-topbar-title, .jellio-live-player-title, .jellio-offline-player-title, .jellio-mini-player-title, .videoPlayerTitle, .headerMediaTitle',
     );
     if (el && el.textContent && el.textContent.trim()) {
       return el.textContent.trim();
@@ -65,9 +65,12 @@ ipcRenderer.on('jellio:navigate', (_event, route) => {
   try {
     if (window.Emby && window.Emby.Page && typeof window.Emby.Page.show === 'function') {
       window.Emby.Page.show(hash);
+    } else {
+      window.location.hash = hash;
     }
-  } catch {}
-  window.location.hash = hash;
+  } catch {
+    window.location.hash = hash;
+  }
 });
 
 ipcRenderer.on('jellio:playback-command', (_event, command) => {

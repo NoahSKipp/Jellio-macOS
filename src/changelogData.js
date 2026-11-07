@@ -16,6 +16,26 @@ function isBigRelease(version) {
 
 const MACOS_CHANGELOG_RELEASES = [
   {
+    version: '0.7.1',
+    title: "What's New in Jellio for macOS",
+    subtitle: 'Version 0.7.1',
+    summary: 'Non-intrusive playback shortcuts, active media key scoping, deep link protocol packaging, and tray menu refinements.',
+    highlights: [
+      {
+        title: 'Refined Playback Menu Shortcuts',
+        description: 'Updated Playback menu accelerators so standard macOS text editing shortcuts in search and login fields are never intercepted.',
+      },
+      {
+        title: 'Scoped Hardware Media Keys',
+        description: 'Hardware media keys now register only while media is actively playing in Jellio, releasing control to other macOS media apps when idle.',
+      },
+      {
+        title: 'Packaged Deep Link Protocols & Config Recovery',
+        description: 'Registered jellio:// and jellyfin:// schemes in the macOS app bundle Info.plist and improved atomic configuration recovery.',
+      },
+    ],
+  },
+  {
     version: '0.7.0',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.7.0',
@@ -41,6 +61,14 @@ const MACOS_CHANGELOG_RELEASES = [
         title: 'Atomic Settings & Safe Updates',
         description: 'Crash-resilient configuration writes with corrupted file backup recovery, and automatic temporary directory cleanup during updates.',
       },
+    ],
+  },
+  {
+    version: '0.6.2',
+    title: "What's New in Jellio for macOS",
+    subtitle: 'Version 0.6.2',
+    summary: 'Jellyfin now shows the right app and version for this Mac.',
+    highlights: [
       {
         title: 'Correct Version in Jellyfin',
         description: "Jellyfin's Devices and Dashboard now list this Mac as Jellio for macOS with the app's real version, instead of Jellio 0.1.0. Needs Jellio 1.86.2 on your server.",

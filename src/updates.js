@@ -12,7 +12,17 @@ const AUTO_INTERVAL_MS = 6 * 60 * 60 * 1000;
 let state = { status: 'idle' };
 let release = null;
 let busy = null;
+let installing = false;
 const listeners = new Set();
+
+function isInstalling() {
+  return installing;
+}
+
+function showMessageBox(window, options) {
+  const parent = window && !window.isDestroyed() ? window : undefined;
+  return parent ? dialog.showMessageBox(parent, options) : dialog.showMessageBox(options);
+}
 
 function getState() {
   return { ...state, current: app.getVersion(), automatic: isAutomatic(), checkedAt: config.get('lastUpdateCheck') || null };
@@ -89,7 +99,7 @@ async function checkForUpdates(window, source) {
   } catch (err) {
     setState({ status: 'error', error: 'Couldn’t check for updates: ' + String(err.message || err) });
     if (source === 'menu') {
-      dialog.showMessageBox(window, { type: 'warning', message: 'Could not check for updates', detail: String(err.message || err) });
+      showMessageBox(window, { type: 'warning', message: 'Could not check for updates', detail: String(err.message || err) });
     }
     return getState();
   }
@@ -98,7 +108,7 @@ async function checkForUpdates(window, source) {
   if (!isNewer(version, app.getVersion())) {
     setState({ status: 'up-to-date', latest: version });
     if (source === 'menu') {
-      dialog.showMessageBox(window, { type: 'info', message: 'Jellio is up to date', detail: 'You have version ' + app.getVersion() + '.' });
+      showMessageBox(window, { type: 'info', message: 'Jellio is up to date', detail: 'You have version ' + app.getVersion() + '.' });
     }
     return getState();
   }
@@ -106,7 +116,7 @@ async function checkForUpdates(window, source) {
   setState({ status: 'available', latest: version, notes: notes(release), url: release.html_url });
   if (source === 'settings') return getState();
   if (source === 'auto' && config.get('skippedVersion') === version) return getState();
-  const { response } = await dialog.showMessageBox(window, {
+  const { response } = await showMessageBox(window, {
     type: 'info',
     message: 'Jellio ' + version + ' is available',
     detail: 'You have version ' + app.getVersion() + '.' + (notes(release) ? '\n\n' + notes(release) : ''),
@@ -208,7 +218,7 @@ async function installUpdate(window) {
         ? 'This release has no app download yet. Try again in a few minutes.'
         : 'Move Jellio to your Applications folder first, then install the update from there.';
       setState({ status: 'error', latest: version, error: reason, url: found.html_url });
-      const { response } = await dialog.showMessageBox(window, {
+      const { response } = await showMessageBox(window, {
         type: 'warning',
         message: 'Jellio can’t update itself here',
         detail: reason,
@@ -245,6 +255,7 @@ async function installUpdate(window) {
       });
       child.unref();
       handedOff = true;
+      installing = true;
       app.quit();
     } finally {
       if (work && !handedOff) {
@@ -256,7 +267,7 @@ async function installUpdate(window) {
   })()
     .catch((err) => {
       setState({ status: 'error', error: 'Couldn’t install the update: ' + String(err.message || err) });
-      dialog.showMessageBox(window, { type: 'warning', message: 'Could not install the update', detail: String(err.message || err) });
+      showMessageBox(window, { type: 'warning', message: 'Could not install the update', detail: String(err.message || err) });
     })
     .finally(() => {
       busy = null;
@@ -270,4 +281,4 @@ function startAutomaticChecks(getWindow) {
   setInterval(() => checkForUpdates(getWindow(), 'auto'), AUTO_INTERVAL_MS);
 }
 
-module.exports = { checkForUpdates, installUpdate, startAutomaticChecks, getState, setAutomatic, onChange };
+module.exports = { checkForUpdates, installUpdate, isInstalling, startAutomaticChecks, getState, setAutomatic, onChange };
