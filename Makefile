@@ -3,33 +3,18 @@
 # GPL-3.0), adapted here to bump package.json instead of a plugin manifest.
 
 release:
-	@echo "Fetching tags..."
-	git fetch --tags
-	@echo "Bumping version with git-cliff..."
-	$(eval NEW_VERSION := $(shell git cliff --bumped-version))
-	$(eval VERSION_NAME := $(NEW_VERSION:v%=%))
-	@echo "New version will be: $(NEW_VERSION)"
-	@echo "Generating changelog..."
-	@git cliff --unreleased --tag $(NEW_VERSION) --strip all > /tmp/release_notes.md
-	@echo "Updating version in package.json..."
-	npm version $(VERSION_NAME) --no-git-tag-version --allow-same-version
-	git add package.json package-lock.json
-	@if git diff --cached --quiet; then \
-		echo "package.json already at $(VERSION_NAME), nothing to commit."; \
-	else \
-		git commit -m "chore(release): bump version to $(NEW_VERSION)"; \
-		echo "Pushing to git..."; \
-		git push; \
-	fi
-	@echo "Creating GitHub release..."
-	gh release create $(NEW_VERSION) --title "$(NEW_VERSION)" --notes-file /tmp/release_notes.md
-	@echo "Release $(NEW_VERSION) created successfully!"
+	@# Resumable: run it again (or with VERSION=x.y.z) after a failure part
+	@# way; DRY_RUN=1 prints what it would do.
+	scripts/release.sh
 
 test:
 	@echo "Fetching tags..."
 	git fetch --tags
 	@echo "Bumping version with git-cliff..."
-	$(eval NEW_VERSION := $(shell git cliff --bumped-version))
+	@# Commits marked [skip changelog] don't count toward git-cliff's bump,
+	@# so a release made only of those would reuse the last tag: bump the
+	@# patch number instead.
+	$(eval NEW_VERSION := $(shell v=$$(git cliff --bumped-version 2>/dev/null); last=$$(git describe --tags --abbrev=0 2>/dev/null); if [ -n "$$last" ] && [ "$$v" = "$$last" ]; then echo "$$last" | awk -F. -v OFS=. '{$$NF=$$NF+1; print}'; else echo "$$v"; fi))
 	@echo "New version will be: $(NEW_VERSION)"
 	@echo "Generating changelog..."
 	@git cliff --unreleased --tag $(NEW_VERSION) --strip all > /tmp/release_notes.md
