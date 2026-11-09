@@ -602,7 +602,9 @@ function describeError(err) {
 }
 
 function fromAppPage(event) {
-  return win && event.sender === win.webContents && isAppPage(event.senderFrame.url);
+  if (!win || event.sender !== win.webContents) return false;
+  const frameUrl = (event.senderFrame && event.senderFrame.url) || win.webContents.getURL() || '';
+  return isAppPage(frameUrl);
 }
 
 ipcMain.handle('jellio:connect', (event, input) => {
@@ -610,8 +612,28 @@ ipcMain.handle('jellio:connect', (event, input) => {
   return connect(input);
 });
 
+ipcMain.handle('jellio:retry', async (event) => {
+  if (!fromAppPage(event)) return { ok: false, error: 'Not allowed.' };
+  const server = serverUrl();
+  if (!server) {
+    loadSetup();
+    return { ok: true };
+  }
+  try {
+    await probe(server);
+    loadServer();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: describeError(err) };
+  }
+});
+
 ipcMain.on('jellio:retry', (event) => {
-  if (fromAppPage(event)) loadServer();
+  if (fromAppPage(event)) {
+    const server = serverUrl();
+    if (!server) return loadSetup();
+    probe(server).then(() => loadServer()).catch(() => {});
+  }
 });
 
 ipcMain.on('jellio:change-server', (event) => {

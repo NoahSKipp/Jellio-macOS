@@ -22,6 +22,10 @@ const MACOS_CHANGELOG_RELEASES = [
     summary: 'Non-intrusive playback shortcuts, active media key scoping, deep link protocol packaging, and tray menu refinements.',
     highlights: [
       {
+        title: 'Offline Screen Reconnection & Auto-Recovery',
+        description: 'Added active connection probing with real-time feedback to the offline screen, periodic auto-retry in the background, and automatic reconnection on network recovery.',
+      },
+      {
         title: 'Refined Playback Menu Shortcuts',
         description: 'Updated Playback menu accelerators so standard macOS text editing shortcuts in search and login fields are never intercepted.',
       },
