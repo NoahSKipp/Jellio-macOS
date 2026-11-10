@@ -36,7 +36,8 @@ macOS Sequoia.
   forward.
 - Go menu: Back `⌘[`, Forward `⌘]`, Home `⇧⌘H`, Search `⌘F`,
   Downloads `⇧⌘D`. Settings `⌘,`.
-- Checks GitHub for a new version once a day.
+- Checks GitHub for a new version shortly after launch and every 6 hours
+  while it runs (turn it off in Settings > About).
 
 ## Build
 
