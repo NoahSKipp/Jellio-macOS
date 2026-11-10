@@ -60,3 +60,29 @@ test('isReleaseAssetUrl pins the repository, tag and asset name', () => {
   assert.ok(!policy.isReleaseAssetUrl(good.replace('https:', 'http:'), 'v1.2.3', name));
   assert.ok(!policy.isReleaseAssetUrl('https://objects.githubusercontent.com/' + name, 'v1.2.3', name));
 });
+
+const plist = (id, version) =>
+  '<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0">\n<dict>\n' +
+  '\t<key>CFBundleURLTypes</key>\n\t<array><dict><key>CFBundleURLName</key><string>Jellio</string></dict></array>\n' +
+  (id ? '\t<key>CFBundleIdentifier</key>\n\t<string>' + id + '</string>\n' : '') +
+  (version ? '\t<key>CFBundleShortVersionString</key>\n\t<string>' + version + '</string>\n' : '') +
+  '</dict>\n</plist>\n';
+
+test('BUNDLE_ID matches the appId electron-builder signs with', () => {
+  assert.strictEqual(policy.BUNDLE_ID, require('../package.json').build.appId);
+});
+
+test('plistString reads string values and decodes entities', () => {
+  assert.strictEqual(policy.plistString(plist('com.noahskipp.jellio', '1.2.3'), 'CFBundleIdentifier'), 'com.noahskipp.jellio');
+  assert.strictEqual(policy.plistString('<key>A</key><string>x &amp; y</string>', 'A'), 'x & y');
+  assert.strictEqual(policy.plistString('<key>A</key><true/>', 'A'), null);
+  assert.strictEqual(policy.plistString(null, 'A'), null);
+});
+
+test('bundleInfoProblem accepts only this app at the release version', () => {
+  assert.strictEqual(policy.bundleInfoProblem(plist('com.noahskipp.jellio', '1.2.3'), '1.2.3'), null);
+  assert.match(policy.bundleInfoProblem(plist('com.example.other', '1.2.3'), '1.2.3'), /not Jellio/);
+  assert.match(policy.bundleInfoProblem(plist(null, '1.2.3'), '1.2.3'), /missing/);
+  assert.match(policy.bundleInfoProblem(plist('com.noahskipp.jellio', '1.2.2'), '1.2.3'), /1\.2\.2, not 1\.2\.3/);
+  assert.match(policy.bundleInfoProblem(plist('com.noahskipp.jellio', null), '1.2.3'), /unknown/);
+});

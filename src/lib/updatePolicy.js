@@ -1,3 +1,4 @@
+const BUNDLE_ID = 'com.noahskipp.jellio';
 const REPO_PATH = '/NoahSKipp/Jellio-macOS';
 const DOWNLOAD_HOSTS = new Set(['github.com', 'objects.githubusercontent.com', 'release-assets.githubusercontent.com']);
 
@@ -49,7 +50,26 @@ function parseChecksum(text, name) {
   return null;
 }
 
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+
+function plistString(xml, key) {
+  const match = new RegExp('<key>' + key + '</key>\\s*<string>([^<]*)</string>').exec(String(xml || ''));
+  return match ? match[1].replace(/&(amp|lt|gt|quot|apos);/g, (_m, name) => ENTITIES[name]) : null;
+}
+
+// Info.plist of the unpacked update, as XML (plutil -convert xml1).
+function bundleInfoProblem(xml, version) {
+  const id = plistString(xml, 'CFBundleIdentifier');
+  if (id !== BUNDLE_ID) return 'The download is not Jellio (bundle id ' + (id || 'missing') + ').';
+  const found = plistString(xml, 'CFBundleShortVersionString');
+  if (found !== version) return 'The download is version ' + (found || 'unknown') + ', not ' + version + '.';
+  return null;
+}
+
 module.exports = {
+  BUNDLE_ID,
+  bundleInfoProblem,
+  plistString,
   isAllowedDownloadUrl,
   isReleaseAssetUrl,
   releaseVersion,

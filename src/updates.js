@@ -6,6 +6,7 @@ const { execFile, spawn } = require('child_process');
 const { app, dialog, net, shell } = require('electron');
 const config = require('./config');
 const {
+  bundleInfoProblem,
   checksumName,
   findAsset,
   isAllowedDownloadUrl,
@@ -224,6 +225,13 @@ async function expectedChecksum(sums, asset) {
   return expected;
 }
 
+async function verifyBundle(candidate, version) {
+  await run('/usr/bin/codesign', ['--verify', '--deep', '--strict', candidate]);
+  const xml = await run('/usr/bin/plutil', ['-convert', 'xml1', '-o', '-', path.join(candidate, 'Contents', 'Info.plist')]);
+  const problem = bundleInfoProblem(xml, version);
+  if (problem) throw new Error(problem);
+}
+
 // Waits for this process to exit, swaps the bundle (putting the old one
 // back if the move fails) and opens the new version.
 const SWAP_SCRIPT = `
@@ -283,12 +291,12 @@ async function installUpdate(window) {
 
       setState({ status: 'installing', latest: version });
       const unpacked = path.join(work, 'unpacked');
-      await run('ditto', ['-x', '-k', zip, unpacked]);
+      await run('/usr/bin/ditto', ['-x', '-k', zip, unpacked]);
       const fresh = path.join(unpacked, path.basename(bundle));
       const candidate = fs.existsSync(fresh) ? fresh : path.join(unpacked, 'Jellio.app');
       if (!fs.existsSync(candidate)) throw new Error('The download has no Jellio app in it.');
-      await run('xattr', ['-cr', candidate]).catch(() => null);
-      await run('codesign', ['--verify', '--deep', candidate]);
+      await verifyBundle(candidate, version);
+      await run('/usr/bin/xattr', ['-cr', candidate]).catch(() => null);
 
       setState({ status: 'restarting', latest: version });
       const child = spawn('/bin/bash', ['-c', SWAP_SCRIPT, 'jellio-update', String(process.pid), bundle, candidate, work], {
