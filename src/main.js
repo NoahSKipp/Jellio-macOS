@@ -20,6 +20,7 @@ const config = require('./config');
 const updates = require('./updates');
 const { isBigRelease, MACOS_CHANGELOG_RELEASES } = require('./changelogData');
 const navigationPolicy = require('./lib/navigationPolicy');
+const serverAddress = require('./lib/serverAddress');
 
 const PAGES_DIR = path.join(__dirname, 'pages');
 const SERVER_PERMISSIONS = [
@@ -588,17 +589,6 @@ function setPlaybackActiveState(active, title) {
   updateTray();
 }
 
-function withScheme(input) {
-  return /^[a-z][a-z0-9+.-]*:\/\//i.test(input) ? [input] : ['https://' + input, 'http://' + input];
-}
-
-function normalise(candidate) {
-  const url = new URL(candidate);
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('Use an http or https address.');
-  const pathname = url.pathname.replace(/\/+$/, '').replace(/\/web(\/.*)?$/i, '');
-  return url.origin + pathname;
-}
-
 async function probe(base) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -617,13 +607,13 @@ async function connect(input) {
   const text = String(input || '').trim();
   if (!text) return { ok: false, error: 'Enter your server’s address.' };
   let lastError = null;
-  for (const candidate of withScheme(text)) {
+  for (const candidate of serverAddress.candidates(text)) {
     let base;
     try {
-      base = normalise(candidate);
+      base = serverAddress.normalise(candidate);
     } catch (err) {
       lastError = err;
-      continue;
+      break;
     }
     try {
       const info = await probe(base);
@@ -632,19 +622,12 @@ async function connect(input) {
       return { ok: true, name: info.ServerName || '' };
     } catch (err) {
       lastError = err;
+      // Falling back after a bad certificate would hand the connection to
+      // whoever presented it, unencrypted.
+      if (!serverAddress.allowsHttpFallback(err)) break;
     }
   }
-  return { ok: false, error: describeError(lastError) };
-}
-
-function describeError(err) {
-  const message = String((err && err.message) || '');
-  if (err && err.name === 'AbortError') return 'The server took too long to answer.';
-  if (/ERR_NAME_NOT_RESOLVED/.test(message)) return 'Couldn’t find that server. Check the address.';
-  if (/ERR_CONNECTION_REFUSED/.test(message)) return 'The server refused the connection. Check the address and port.';
-  if (/ERR_CERT|ERR_SSL/.test(message)) return 'The server’s certificate isn’t trusted.';
-  if (!message || /net::ERR_/.test(message)) return 'Couldn’t reach that server.';
-  return message;
+  return { ok: false, error: serverAddress.describeError(lastError) };
 }
 
 function fromAppPage(event) {
@@ -668,7 +651,7 @@ ipcMain.handle('jellio:retry', async (event) => {
     loadServer();
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: describeError(err) };
+    return { ok: false, error: serverAddress.describeError(err) };
   }
 });
 
