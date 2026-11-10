@@ -690,7 +690,9 @@ ipcMain.on('jellio:dismiss-whatsnew', (event) => {
 });
 
 function fromServerPage(event) {
-  return win && event.sender === win.webContents && isServerUrl(event.senderFrame.url);
+  if (!win || win.isDestroyed() || event.sender !== win.webContents) return false;
+  const url = mainFrameUrl(event);
+  return Boolean(url && isServerUrl(url));
 }
 
 // Jellio's Settings > About (the plugin) shows and drives updates.
@@ -717,13 +719,13 @@ updates.onChange((snapshot) => {
 });
 
 ipcMain.on('jellio:downloads', (event, count, progress) => {
-  if (!win || event.sender !== win.webContents || (!isServerUrl(event.senderFrame.url) && !isAppPage(event.senderFrame.url))) return;
-  setActiveDownloads(Math.max(0, parseInt(count, 10) || 0), typeof progress === 'number' ? progress : undefined);
+  if (!fromServerPage(event)) return;
+  setActiveDownloads(Math.max(0, parseInt(count, 10) || 0), Number.isFinite(progress) ? progress : undefined);
 });
 
 ipcMain.on('jellio:playback-state', (event, active, title) => {
-  if (!win || event.sender !== win.webContents || (!isServerUrl(event.senderFrame.url) && !isAppPage(event.senderFrame.url))) return;
-  setPlaybackActiveState(!!active, title);
+  if (!fromServerPage(event)) return;
+  setPlaybackActiveState(!!active, typeof title === 'string' ? title.slice(0, 200) : null);
 });
 
 function sendMediaAction(action) {
