@@ -15,7 +15,7 @@
   "scripts": {
     "start": "electron .",
     "check": "node scripts/check.js",
-    "test": "npm run check",
+    "test": "npm run check && node --test 'test/*.test.js'",
     "dist": "electron-builder --mac --arm64 --publish never"
   },
   "devDependencies": {
