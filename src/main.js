@@ -677,14 +677,6 @@ ipcMain.handle('jellio:retry', async (event) => {
   }
 });
 
-ipcMain.on('jellio:retry', (event) => {
-  if (fromAppPage(event)) {
-    const server = serverUrl();
-    if (!server) return loadSetup();
-    probe(server).then(() => loadServer()).catch(() => {});
-  }
-});
-
 ipcMain.on('jellio:change-server', (event) => {
   if (fromAppPage(event)) loadSetup();
 });
