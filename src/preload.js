@@ -74,12 +74,9 @@ ipcRenderer.on('jellio:navigate', (_event, route) => {
 });
 
 ipcRenderer.on('jellio:playback-command', (_event, command) => {
-  window.dispatchEvent(new CustomEvent('jellio:playback-command', { detail: { command } }));
-
   const video = document.querySelector('video') || document.querySelector('audio');
   switch (command) {
-    case 'play-pause':
-    case 'playPause': {
+    case 'play-pause': {
       const handled = !document.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'MediaPlayPause', bubbles: true, cancelable: true }),
       );
@@ -104,8 +101,7 @@ ipcRenderer.on('jellio:playback-command', (_event, command) => {
       );
       break;
     }
-    case 'skip-forward':
-    case 'skipForward': {
+    case 'skip-forward': {
       const handled = !document.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
       );
@@ -114,8 +110,7 @@ ipcRenderer.on('jellio:playback-command', (_event, command) => {
       }
       break;
     }
-    case 'skip-backward':
-    case 'skipBackward': {
+    case 'skip-backward': {
       const handled = !document.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }),
       );
@@ -124,8 +119,7 @@ ipcRenderer.on('jellio:playback-command', (_event, command) => {
       }
       break;
     }
-    case 'volume-up':
-    case 'volumeUp': {
+    case 'volume-up': {
       const handled = !document.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }),
       );
@@ -134,8 +128,7 @@ ipcRenderer.on('jellio:playback-command', (_event, command) => {
       }
       break;
     }
-    case 'volume-down':
-    case 'volumeDown': {
+    case 'volume-down': {
       const handled = !document.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }),
       );
@@ -144,8 +137,7 @@ ipcRenderer.on('jellio:playback-command', (_event, command) => {
       }
       break;
     }
-    case 'toggle-pip':
-    case 'togglePip': {
+    case 'toggle-pip': {
       if (document.pictureInPictureElement) {
         document.exitPictureInPicture().catch(() => {});
       } else if (video && typeof video.requestPictureInPicture === 'function') {
