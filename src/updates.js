@@ -18,6 +18,7 @@ const {
 } = require('./lib/updatePolicy');
 
 const LATEST = 'https://api.github.com/repos/NoahSKipp/Jellio-macOS/releases/latest';
+const USER_AGENT = 'Jellio-macOS';
 const AUTO_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 let state = { status: 'idle' };
@@ -78,7 +79,7 @@ function isNewer(candidate, current) {
 
 async function latestRelease() {
   const response = await net.fetch(LATEST, {
-    headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Jellio-macOS' },
+    headers: { Accept: 'application/vnd.github+json', 'User-Agent': USER_AGENT },
     cache: 'no-store',
   });
   if (!response.ok) throw new Error('GitHub answered ' + response.status);
@@ -177,7 +178,7 @@ function get(url) {
       return;
     }
     const request = net.request({ url, redirect: 'manual', cache: 'no-store' });
-    request.setHeader('User-Agent', 'Jellio-macOS');
+    request.setHeader('User-Agent', USER_AGENT);
     request.on('redirect', (_status, _method, location) => {
       if (isAllowedDownloadUrl(location)) {
         request.followRedirect();
