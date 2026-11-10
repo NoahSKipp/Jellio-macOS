@@ -73,79 +73,32 @@ ipcRenderer.on('jellio:navigate', (_event, route) => {
   }
 });
 
+// The page's own key handler goes first; the fallback only runs when
+// nothing handled the key.
+const KEY_COMMANDS = {
+  'play-pause': ['MediaPlayPause', (media) => (media.paused ? media.play().catch(() => {}) : media.pause())],
+  next: ['MediaTrackNext'],
+  previous: ['MediaTrackPrevious'],
+  'skip-forward': ['ArrowRight', (media) => (media.currentTime = Math.min(media.duration || Infinity, media.currentTime + 10))],
+  'skip-backward': ['ArrowLeft', (media) => (media.currentTime = Math.max(0, media.currentTime - 10))],
+  'volume-up': ['ArrowUp', (media) => (media.volume = Math.min(1, media.volume + 0.1))],
+  'volume-down': ['ArrowDown', (media) => (media.volume = Math.max(0, media.volume - 0.1))],
+};
+
 ipcRenderer.on('jellio:playback-command', (_event, command) => {
-  const video = document.querySelector('video') || document.querySelector('audio');
-  switch (command) {
-    case 'play-pause': {
-      const handled = !document.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'MediaPlayPause', bubbles: true, cancelable: true }),
-      );
-      if (!handled && video) {
-        if (video.paused) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
-      }
-      break;
+  const media = document.querySelector('video') || document.querySelector('audio');
+  if (command === 'toggle-pip') {
+    if (document.pictureInPictureElement) {
+      document.exitPictureInPicture().catch(() => {});
+    } else if (media && typeof media.requestPictureInPicture === 'function') {
+      media.requestPictureInPicture().catch(() => {});
     }
-    case 'next': {
-      document.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'MediaTrackNext', bubbles: true, cancelable: true }),
-      );
-      break;
-    }
-    case 'previous': {
-      document.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'MediaTrackPrevious', bubbles: true, cancelable: true }),
-      );
-      break;
-    }
-    case 'skip-forward': {
-      const handled = !document.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
-      );
-      if (!handled && video && typeof video.currentTime === 'number') {
-        video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 10);
-      }
-      break;
-    }
-    case 'skip-backward': {
-      const handled = !document.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }),
-      );
-      if (!handled && video && typeof video.currentTime === 'number') {
-        video.currentTime = Math.max(0, video.currentTime - 10);
-      }
-      break;
-    }
-    case 'volume-up': {
-      const handled = !document.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }),
-      );
-      if (!handled && video && typeof video.volume === 'number') {
-        video.volume = Math.min(1.0, video.volume + 0.1);
-      }
-      break;
-    }
-    case 'volume-down': {
-      const handled = !document.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }),
-      );
-      if (!handled && video && typeof video.volume === 'number') {
-        video.volume = Math.max(0.0, video.volume - 0.1);
-      }
-      break;
-    }
-    case 'toggle-pip': {
-      if (document.pictureInPictureElement) {
-        document.exitPictureInPicture().catch(() => {});
-      } else if (video && typeof video.requestPictureInPicture === 'function') {
-        video.requestPictureInPicture().catch(() => {});
-      }
-      break;
-    }
+    return;
   }
+  if (!Object.prototype.hasOwnProperty.call(KEY_COMMANDS, command)) return;
+  const [key, fallback] = KEY_COMMANDS[command];
+  const handled = !document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  if (!handled && fallback && media) fallback(media);
 });
 
 function syncPlaybackState() {
