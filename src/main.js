@@ -395,13 +395,9 @@ function updateTray() {
 
 function createTray() {
   if (tray) return;
-  const iconPath = path.join(__dirname, '..', 'build', 'icon.png');
-  let icon;
-  try {
-    icon = nativeImage.createFromPath(iconPath).resize({ width: 18, height: 18 });
-  } catch {
-    icon = nativeImage.createEmpty();
-  }
+  // Picks up trayTemplate@2x.png on Retina displays by itself.
+  const icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'trayTemplate.png'));
+  icon.setTemplateImage(true);
   tray = new Tray(icon);
   tray.setToolTip('Jellio');
   updateTray();
