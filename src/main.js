@@ -448,8 +448,7 @@ function createWindow() {
   });
 
   contents.setWindowOpenHandler(({ url }) => {
-    if (isServerUrl(url)) return { action: 'allow' };
-    if (/^(https?|mailto):/i.test(url)) shell.openExternal(url);
+    if (navigationPolicy.popupOpensExternally(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
 

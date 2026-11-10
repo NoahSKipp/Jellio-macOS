@@ -47,4 +47,10 @@ function subframeAllowed(value) {
   return Boolean(url && SUBFRAME_SCHEMES.has(url.protocol));
 }
 
-module.exports = { isAppPage, isServerUrl, navigationAction, subframeAllowed };
+// Popups never open in the app, so they never get the preload.
+function popupOpensExternally(value) {
+  const url = parse(value);
+  return Boolean(url && /^(https?|mailto):$/.test(url.protocol));
+}
+
+module.exports = { isAppPage, isServerUrl, navigationAction, popupOpensExternally, subframeAllowed };

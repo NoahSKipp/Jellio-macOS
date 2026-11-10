@@ -70,3 +70,12 @@ test('subframeAllowed permits web embeds only', () => {
   assert.ok(!policy.subframeAllowed('jellio://home'));
   assert.ok(!policy.subframeAllowed(''));
 });
+
+test('popupOpensExternally hands web and mail links to the system', () => {
+  assert.ok(policy.popupOpensExternally('https://jellyfin.example.com/web/#/home'));
+  assert.ok(policy.popupOpensExternally('http://example.com/'));
+  assert.ok(policy.popupOpensExternally('mailto:someone@example.com'));
+  assert.ok(!policy.popupOpensExternally('file:///Applications/Calculator.app'));
+  assert.ok(!policy.popupOpensExternally('javascript:alert(1)'));
+  assert.ok(!policy.popupOpensExternally('x-apple.systempreferences:com.apple.preference'));
+});
