@@ -22,6 +22,15 @@ const { isBigRelease, MACOS_CHANGELOG_RELEASES } = require('./changelogData');
 const navigationPolicy = require('./lib/navigationPolicy');
 
 const PAGES_DIR = path.join(__dirname, 'pages');
+const SERVER_PERMISSIONS = [
+  'notifications',
+  'fullscreen',
+  'clipboard-sanitized-write',
+  'clipboard-read',
+  'media',
+  'mediaKeySystem',
+  'persistent-storage',
+];
 
 const HOME_ROUTES = {
   home: '#/home',
@@ -516,8 +525,10 @@ function createWindow() {
   });
 
   contents.session.setPermissionRequestHandler((webContents, permission, callback, details) => {
-    const allowed = ['notifications', 'fullscreen', 'clipboard-sanitized-write', 'clipboard-read', 'media', 'mediaKeySystem', 'persistent-storage'];
-    callback(isServerUrl(details.requestingUrl || webContents.getURL()) && allowed.includes(permission));
+    callback(isServerUrl(details.requestingUrl || webContents.getURL()) && SERVER_PERMISSIONS.includes(permission));
+  });
+  contents.session.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
+    return isServerUrl(requestingOrigin) && SERVER_PERMISSIONS.includes(permission);
   });
 
   const ua = contents.getUserAgent();
