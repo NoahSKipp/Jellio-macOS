@@ -19,6 +19,9 @@ const {
 const config = require('./config');
 const updates = require('./updates');
 const { isBigRelease, MACOS_CHANGELOG_RELEASES } = require('./changelogData');
+const navigationPolicy = require('./lib/navigationPolicy');
+
+const PAGES_DIR = path.join(__dirname, 'pages');
 
 const HOME_ROUTES = {
   home: '#/home',
@@ -176,15 +179,27 @@ function serverOrigin() {
 }
 
 function isServerUrl(url) {
-  try {
-    return new URL(url).origin === serverOrigin();
-  } catch {
-    return false;
-  }
+  return navigationPolicy.isServerUrl(url, serverOrigin());
 }
 
 function isAppPage(url) {
-  return url.startsWith('file://');
+  return navigationPolicy.isAppPage(url, PAGES_DIR);
+}
+
+// senderFrame is null once the frame is gone, and reading a disposed
+// frame's url throws.
+function mainFrameUrl(event) {
+  try {
+    const frame = event.senderFrame;
+    return frame && !frame.parent ? frame.url : null;
+  } catch {
+    return null;
+  }
+}
+
+function fromAppFrame(event) {
+  const url = mainFrameUrl(event);
+  return Boolean(url && isAppPage(url));
 }
 
 function loadSetup() {
@@ -602,9 +617,7 @@ function describeError(err) {
 }
 
 function fromAppPage(event) {
-  if (!win || event.sender !== win.webContents) return false;
-  const frameUrl = (event.senderFrame && event.senderFrame.url) || win.webContents.getURL() || '';
-  return isAppPage(frameUrl);
+  return Boolean(win && event.sender === win.webContents && fromAppFrame(event));
 }
 
 ipcMain.handle('jellio:connect', (event, input) => {
@@ -641,7 +654,7 @@ ipcMain.on('jellio:change-server', (event) => {
 });
 
 ipcMain.handle('jellio:get-changelogs', (event) => {
-  if (!event.senderFrame || !isAppPage(event.senderFrame.url)) return [];
+  if (!fromAppFrame(event)) return [];
   return MACOS_CHANGELOG_RELEASES;
 });
 // Sent to Jellyfin as this client's version, so Devices shows the app's own.
@@ -649,7 +662,7 @@ ipcMain.on('jellio:app-version', (event) => {
   event.returnValue = app.getVersion();
 });
 ipcMain.on('jellio:dismiss-whatsnew', (event) => {
-  if (!event.senderFrame || !isAppPage(event.senderFrame.url)) return;
+  if (!fromAppFrame(event)) return;
   config.set('lastSeenChangelogVersion', app.getVersion());
   if (whatsNewWin && !whatsNewWin.isDestroyed()) {
     whatsNewWin.close();
