@@ -11,7 +11,7 @@ function updateDetail(msg) {
 }
 
 if (server) {
-  updateDetail('Jellio couldn’t connect to ' + server + (reason ? ' (' + reason + ')' : '') + '.');
+  updateDetail('Jellio couldn’t connect to ' + server + '.' + (reason ? ' ' + reason : ''));
 }
 
 let retrying = false;

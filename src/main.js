@@ -212,7 +212,16 @@ function fromAppFrame(event) {
   return Boolean(url && isAppPage(url));
 }
 
+const LOAD_TIMEOUT_MS = 20000;
+let loadTimer = null;
+
+function clearLoadTimer() {
+  clearTimeout(loadTimer);
+  loadTimer = null;
+}
+
 function loadSetup() {
+  clearLoadTimer();
   setPlaybackActiveState(false);
   setActiveDownloads(0);
   win.loadFile(path.join(__dirname, 'pages', 'setup.html'), {
@@ -223,10 +232,19 @@ function loadSetup() {
 function loadServer() {
   const server = serverUrl();
   if (!server) return loadSetup();
-  win.loadURL(server + '/web/');
+  // A blackholed host never fails on its own; give up and say so.
+  clearLoadTimer();
+  loadTimer = setTimeout(() => {
+    loadTimer = null;
+    if (!win || win.isDestroyed()) return;
+    win.webContents.stop();
+    loadOffline(serverAddress.describeLoadFailure(-118));
+  }, LOAD_TIMEOUT_MS);
+  win.loadURL(server + '/web/').catch(() => {});
 }
 
 function loadOffline(reason) {
+  clearLoadTimer();
   setPlaybackActiveState(false);
   setActiveDownloads(0);
   win.loadFile(path.join(__dirname, 'pages', 'offline.html'), {
@@ -491,9 +509,10 @@ function createWindow() {
 
   // Jellio's service worker answers for the server while it's down, so
   // this only happens before it has ever been cached on this Mac.
-  contents.on('did-fail-load', (_event, code, description, url, isMainFrame) => {
+  contents.on('did-navigate', () => clearLoadTimer());
+  contents.on('did-fail-load', (_event, code, _description, url, isMainFrame) => {
     if (!isMainFrame || code === -3 || !isServerUrl(url)) return;
-    loadOffline(description);
+    loadOffline(serverAddress.describeLoadFailure(code));
   });
 
   contents.on('render-process-gone', (_event, details) => {
