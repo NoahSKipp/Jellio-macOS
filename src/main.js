@@ -49,6 +49,7 @@ let isPlaybackPlaying = false;
 let currentDownloadProgress = -1;
 let currentUpdaterProgress = -1;
 let pendingRoute = null;
+let crashTimes = [];
 
 function showWhatsNewWindow() {
   if (whatsNewWin && !whatsNewWin.isDestroyed()) {
@@ -533,6 +534,12 @@ function createWindow() {
     setActiveDownloads(0);
     if (details.reason === 'clean-exit') return;
     console.warn('Jellio: page crashed', details.reason);
+    const now = Date.now();
+    crashTimes = crashTimes.filter((time) => now - time < 2 * 60 * 1000).concat(now);
+    if (crashTimes.length > 3) {
+      setTimeout(() => win && !win.isDestroyed() && loadOffline('Jellio’s page kept crashing, so it stopped reloading it.'), 1000);
+      return;
+    }
     setTimeout(() => win && !win.isDestroyed() && loadServer(), 1000);
   });
 
