@@ -5,6 +5,7 @@ const path = require('path');
 const { execFile, spawn } = require('child_process');
 const { app, dialog, net, shell } = require('electron');
 const config = require('./config');
+const { checksumName, findAsset, parseChecksum, releaseVersion, zipName } = require('./lib/updatePolicy');
 
 const LATEST = 'https://api.github.com/repos/NoahSKipp/Jellio-macOS/releases/latest';
 const AUTO_INTERVAL_MS = 6 * 60 * 60 * 1000;
@@ -72,10 +73,6 @@ async function latestRelease() {
   });
   if (!response.ok) throw new Error('GitHub answered ' + response.status);
   return response.json();
-}
-
-function zipAsset(found) {
-  return (found.assets || []).find((asset) => /-arm64\.zip$/.test(asset.name)) || null;
 }
 
 function notes(found) {
@@ -178,14 +175,20 @@ async function download(asset, file, version) {
   return hash.digest('hex');
 }
 
-async function expectedChecksum(found, asset) {
-  const stem = asset.name.replace(/\.zip$/, '');
-  const sums = (found.assets || []).find((candidate) => /\.sha256$/.test(candidate.name) && candidate.name.startsWith(stem));
-  if (!sums) return null;
-  const response = await net.fetch(sums.browser_download_url, { headers: { 'User-Agent': 'Jellio-macOS' } });
-  if (!response.ok) return null;
-  const line = (await response.text()).split('\n').find((entry) => entry.trim().endsWith(asset.name));
-  return line ? line.trim().split(/\s+/)[0].toLowerCase() : null;
+const CHECKSUM_UNAVAILABLE = 'Jellio couldn’t get the checksum for this update, so it didn’t install it. Try again later.';
+
+async function expectedChecksum(sums, asset) {
+  let text;
+  try {
+    const response = await net.fetch(sums.browser_download_url, { headers: { 'User-Agent': 'Jellio-macOS' }, cache: 'no-store' });
+    if (!response.ok) throw new Error('The checksum answered ' + response.status);
+    text = await response.text();
+  } catch {
+    throw new Error(CHECKSUM_UNAVAILABLE);
+  }
+  const expected = parseChecksum(text, asset.name);
+  if (!expected) throw new Error(CHECKSUM_UNAVAILABLE);
+  return expected;
 }
 
 // Waits for this process to exit, swaps the bundle (putting the old one
@@ -210,13 +213,17 @@ async function installUpdate(window) {
   if (busy) return busy;
   busy = (async () => {
     const found = release || (await latestRelease());
-    const version = String(found.tag_name || '').replace(/^v/, '');
-    const asset = zipAsset(found);
+    const version = releaseVersion(found);
+    if (!version) throw new Error('The latest release has no version Jellio understands.');
+    const asset = findAsset(found, zipName(version));
+    const sums = findAsset(found, checksumName(version));
     const bundle = bundlePath();
-    if (!asset || !bundle) {
+    if (!asset || !sums || !bundle) {
       const reason = !asset
         ? 'This release has no app download yet. Try again in a few minutes.'
-        : 'Move Jellio to your Applications folder first, then install the update from there.';
+        : !sums
+          ? 'This release has no checksum to check the download against, so Jellio won’t install it. Try again in a few minutes, or download it from the release page.'
+          : 'Move Jellio to your Applications folder first, then install the update from there.';
       setState({ status: 'error', latest: version, error: reason, url: found.html_url });
       const { response } = await showMessageBox(window, {
         type: 'warning',
@@ -235,9 +242,9 @@ async function installUpdate(window) {
       work = fs.mkdtempSync(path.join(os.tmpdir(), 'jellio-update-'));
       const zip = path.join(work, asset.name);
       setState({ status: 'downloading', latest: version, progress: 0 });
+      const expected = await expectedChecksum(sums, asset);
       const actual = await download(asset, zip, version);
-      const expected = await expectedChecksum(found, asset).catch(() => null);
-      if (expected && expected !== actual) throw new Error('The download didn’t match its checksum.');
+      if (actual !== expected) throw new Error('The download didn’t match its checksum.');
 
       setState({ status: 'installing', latest: version });
       const unpacked = path.join(work, 'unpacked');
