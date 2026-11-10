@@ -243,7 +243,22 @@ if (!appPage && /^https?:$/.test(location.protocol)) {
       ipcRenderer.send('jellio:downloads', count, progress);
     }
   };
+  // Hidden and idle there is nothing to report; while a download runs the
+  // count still feeds the Dock badge and quit guard with the window closed.
+  let polling = false;
+  const poll = async () => {
+    await tick();
+    if (document.visibilityState === 'visible' || lastCount > 0) setTimeout(poll, 4000);
+    else polling = false;
+  };
+  const start = () => {
+    if (polling) return;
+    polling = true;
+    poll();
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') start();
+  });
   // First count after startup, so it doesn't compete with the page loading.
-  setTimeout(tick, 5000);
-  setInterval(tick, 4000);
+  setTimeout(start, 5000);
 }
