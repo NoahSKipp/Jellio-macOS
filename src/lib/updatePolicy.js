@@ -23,6 +23,14 @@ function isReleaseAssetUrl(value, tag, name) {
   return url.pathname === REPO_PATH + '/releases/download/' + encodeURIComponent(tag) + '/' + encodeURIComponent(name);
 }
 
+const RELEASES_PAGE = 'https://github.com' + REPO_PATH + '/releases';
+
+function releasePageUrl(value) {
+  const url = httpsUrl(value);
+  const ok = url && url.hostname === 'github.com' && (url.pathname === REPO_PATH + '/releases' || url.pathname.startsWith(REPO_PATH + '/releases/'));
+  return ok ? url.href : RELEASES_PAGE;
+}
+
 function releaseVersion(release) {
   const version = String((release && release.tag_name) || '').replace(/^v/, '');
   return /^\d+\.\d+\.\d+$/.test(version) ? version : null;
@@ -70,6 +78,7 @@ module.exports = {
   BUNDLE_ID,
   bundleInfoProblem,
   plistString,
+  releasePageUrl,
   isAllowedDownloadUrl,
   isReleaseAssetUrl,
   releaseVersion,

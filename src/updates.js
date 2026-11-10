@@ -12,6 +12,7 @@ const {
   isAllowedDownloadUrl,
   isReleaseAssetUrl,
   parseChecksum,
+  releasePageUrl,
   releaseVersion,
   zipName,
 } = require('./lib/updatePolicy');
@@ -119,7 +120,7 @@ async function checkForUpdates(window, source) {
     return getState();
   }
 
-  setState({ status: 'available', latest: version, notes: notes(release), url: release.html_url });
+  setState({ status: 'available', latest: version, notes: notes(release), url: releasePageUrl(release.html_url) });
   if (source === 'settings') return getState();
   if (source === 'auto' && config.get('skippedVersion') === version) return getState();
   const { response } = await showMessageBox(window, {
@@ -267,7 +268,7 @@ async function installUpdate(window) {
         : !sums
           ? 'This release has no checksum to check the download against, so Jellio won’t install it. Try again in a few minutes, or download it from the release page.'
           : 'Move Jellio to your Applications folder first, then install the update from there.';
-      setState({ status: 'error', latest: version, error: reason, url: found.html_url });
+      setState({ status: 'error', latest: version, error: reason, url: releasePageUrl(found.html_url) });
       const { response } = await showMessageBox(window, {
         type: 'warning',
         message: 'Jellio can’t update itself here',
@@ -275,7 +276,7 @@ async function installUpdate(window) {
         buttons: ['Open Release Page', 'OK'],
         defaultId: 1,
       });
-      if (response === 0) shell.openExternal(found.html_url);
+      if (response === 0) shell.openExternal(releasePageUrl(found.html_url));
       return;
     }
 

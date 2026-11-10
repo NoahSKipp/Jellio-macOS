@@ -86,3 +86,15 @@ test('bundleInfoProblem accepts only this app at the release version', () => {
   assert.match(policy.bundleInfoProblem(plist('com.noahskipp.jellio', '1.2.2'), '1.2.3'), /1\.2\.2, not 1\.2\.3/);
   assert.match(policy.bundleInfoProblem(plist('com.noahskipp.jellio', null), '1.2.3'), /unknown/);
 });
+
+test('releasePageUrl keeps this repository release pages and replaces anything else', () => {
+  const fallback = 'https://github.com/NoahSKipp/Jellio-macOS/releases';
+  const tagPage = 'https://github.com/NoahSKipp/Jellio-macOS/releases/tag/v1.2.3';
+  assert.strictEqual(policy.releasePageUrl(tagPage), tagPage);
+  assert.strictEqual(policy.releasePageUrl(fallback), fallback);
+  assert.strictEqual(policy.releasePageUrl('https://github.com/NoahSKipp/Jellio-macOS/releasesevil'), fallback);
+  assert.strictEqual(policy.releasePageUrl('https://github.com/someone/else/releases/tag/v1'), fallback);
+  assert.strictEqual(policy.releasePageUrl('file:///Applications/Calculator.app'), fallback);
+  assert.strictEqual(policy.releasePageUrl('javascript:alert(1)'), fallback);
+  assert.strictEqual(policy.releasePageUrl(undefined), fallback);
+});
