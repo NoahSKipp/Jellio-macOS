@@ -16,6 +16,29 @@ function isBigRelease(version) {
 
 const MACOS_CHANGELOG_RELEASES = [
   {
+    version: '0.8.0',
+    title: "What's New in Jellio for macOS",
+    subtitle: 'Version 0.8.0',
+    highlights: [
+      {
+        title: 'Safer Updates',
+        description: 'Updates install only from this project\'s GitHub releases, with a matching checksum and a valid signature, bundle id and version checked before macOS quarantine is cleared.',
+      },
+      {
+        title: 'Hardened Navigation',
+        description: 'Only Jellio\'s own pages and your server can use the app bridge, popups open in your browser, and redirects and frames follow the same rules. Sign-in pages in front of your server (Authelia, Authentik) still work.',
+      },
+      {
+        title: 'Honest Connections',
+        description: 'A certificate problem is reported instead of silently switching to http, and a server that never answers shows the offline page with a readable reason after 20 seconds.',
+      },
+      {
+        title: 'Menu Bar and Lifecycle Fixes',
+        description: 'The menu bar icon now ships with the app, logging out or shutting down is no longer blocked by the downloads prompt, and the app reconnects faster after waking.',
+      },
+    ],
+  },
+  {
     version: '0.7.1',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.7.1',
