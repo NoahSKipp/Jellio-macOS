@@ -978,6 +978,11 @@ app.whenReady().then(() => {
   buildDockMenu();
   createTray();
   preconnectServer();
+  // Logout, restart and shutdown: a prompt here would stall the system.
+  powerMonitor.on('shutdown', () => {
+    quitConfirmed = true;
+    app.quit();
+  });
   powerMonitor.on('resume', () => {
     lastPreconnect = 0;
     preconnectServer();
