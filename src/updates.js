@@ -21,7 +21,6 @@ const LATEST = 'https://api.github.com/repos/NoahSKipp/Jellio-macOS/releases/lat
 const AUTO_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 let state = { status: 'idle' };
-let release = null;
 let busy = null;
 let installing = false;
 const listeners = new Set();
@@ -100,6 +99,7 @@ async function checkForUpdates(window, source) {
     if (Date.now() - last < AUTO_INTERVAL_MS) return getState();
   }
   setState({ status: 'checking' });
+  let release;
   try {
     release = await latestRelease();
     config.set('lastUpdateCheck', Date.now());
@@ -254,9 +254,14 @@ open "$old"
 async function installUpdate(window) {
   if (busy) return busy;
   busy = (async () => {
-    const found = release || (await latestRelease());
+    // What was offered may be stale by now (pulled, or superseded).
+    const found = await latestRelease();
     const version = releaseVersion(found);
     if (!version) throw new Error('The latest release has no version Jellio understands.');
+    if (!isNewer(version, app.getVersion())) {
+      setState({ status: 'up-to-date', latest: version });
+      return;
+    }
     const asset = findAsset(found, zipName(version));
     const sums = findAsset(found, checksumName(version));
     const bundle = bundlePath();
