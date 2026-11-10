@@ -11,6 +11,7 @@ const {
   nativeImage,
   nativeTheme,
   net,
+  powerMonitor,
   powerSaveBlocker,
   screen,
   session,
@@ -186,6 +187,16 @@ function serverOrigin() {
   } catch {
     return null;
   }
+}
+
+let lastPreconnect = 0;
+
+// Warm sockets to the server before the next request needs them.
+function preconnectServer() {
+  const server = serverUrl();
+  if (!server || Date.now() - lastPreconnect < 10000) return;
+  lastPreconnect = Date.now();
+  session.defaultSession.preconnect({ url: server, numSockets: 4 });
 }
 
 function isServerUrl(url) {
@@ -438,7 +449,10 @@ function createWindow() {
 
   win.on('show', () => updateTray());
   win.on('hide', () => updateTray());
-  win.on('focus', () => updateTray());
+  win.on('focus', () => {
+    preconnectServer();
+    updateTray();
+  });
   win.on('blur', () => updateTray());
 
   // Closing the window keeps Jellio running (and downloading) in the Dock.
@@ -506,6 +520,9 @@ function createWindow() {
   // Jellio's service worker answers for the server while it's down, so
   // this only happens before it has ever been cached on this Mac.
   contents.on('did-navigate', () => clearLoadTimer());
+  contents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
+    if (isMainFrame && isServerUrl(url) && /#\/play\b/.test(url)) preconnectServer();
+  });
   contents.on('did-fail-load', (_event, code, _description, url, isMainFrame) => {
     if (!isMainFrame || code === -3 || !isServerUrl(url)) return;
     loadOffline(serverAddress.describeLoadFailure(code));
@@ -960,8 +977,11 @@ app.whenReady().then(() => {
   buildMenu();
   buildDockMenu();
   createTray();
-  const server = serverUrl();
-  if (server) session.defaultSession.preconnect({ url: server, numSockets: 4 });
+  preconnectServer();
+  powerMonitor.on('resume', () => {
+    lastPreconnect = 0;
+    preconnectServer();
+  });
   createWindow();
   if (shouldShowWhatsNewOnStartup()) {
     showWhatsNewWindow();
