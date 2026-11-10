@@ -49,3 +49,24 @@ test('isServerUrl compares origins exactly', () => {
   assert.ok(!policy.isServerUrl('file:///tmp/x.html', 'null'));
   assert.ok(!policy.isServerUrl('https://jellyfin.example.com/', null));
 });
+
+test('navigationAction keeps the server and app pages, sends the web outside', () => {
+  const origin = 'https://jellyfin.example.com';
+  assert.strictEqual(policy.navigationAction('https://jellyfin.example.com/web/', origin, PAGES), 'allow');
+  assert.strictEqual(policy.navigationAction(page('setup.html'), origin, PAGES), 'allow');
+  assert.strictEqual(policy.navigationAction('https://anilist.co/api/v2/oauth/authorize', origin, PAGES), 'external');
+  assert.strictEqual(policy.navigationAction('http://jellyfin.example.com/web/', origin, PAGES), 'external');
+  assert.strictEqual(policy.navigationAction('file:///tmp/evil.html', origin, PAGES), 'deny');
+  assert.strictEqual(policy.navigationAction('javascript:alert(1)', origin, PAGES), 'deny');
+  assert.strictEqual(policy.navigationAction('smb://host/share', origin, PAGES), 'deny');
+  assert.strictEqual(policy.navigationAction('https://anything.example/', null, PAGES), 'external');
+});
+
+test('subframeAllowed permits web embeds only', () => {
+  assert.ok(policy.subframeAllowed('https://www.youtube-nocookie.com/embed/abc?autoplay=1'));
+  assert.ok(policy.subframeAllowed('about:blank'));
+  assert.ok(!policy.subframeAllowed(page('setup.html')));
+  assert.ok(!policy.subframeAllowed('file:///etc/passwd'));
+  assert.ok(!policy.subframeAllowed('jellio://home'));
+  assert.ok(!policy.subframeAllowed(''));
+});

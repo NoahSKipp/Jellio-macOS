@@ -453,10 +453,31 @@ function createWindow() {
     return { action: 'deny' };
   });
 
-  contents.on('will-navigate', (event, url) => {
-    if (isServerUrl(url) || isAppPage(url)) return;
+  contents.on('will-navigate', (event) => {
+    const action = navigationPolicy.navigationAction(event.url, serverOrigin(), PAGES_DIR);
+    if (action === 'allow') return;
     event.preventDefault();
-    if (/^https?:/i.test(url)) shell.openExternal(url);
+    if (action === 'external') shell.openExternal(event.url);
+  });
+
+  // The main frame is will-navigate's job; this covers iframes.
+  contents.on('will-frame-navigate', (event) => {
+    if (event.isMainFrame) return;
+    if (!navigationPolicy.subframeAllowed(event.url)) event.preventDefault();
+  });
+
+  contents.on('will-redirect', (event) => {
+    if (!event.isMainFrame) {
+      if (!navigationPolicy.subframeAllowed(event.url)) event.preventDefault();
+      return;
+    }
+    if (navigationPolicy.navigationAction(event.url, serverOrigin(), PAGES_DIR) === 'allow') return;
+    event.preventDefault();
+    let target = event.url;
+    try {
+      target = new URL(event.url).origin;
+    } catch {}
+    setImmediate(() => loadOffline('The server sent Jellio to ' + target + '. If that is your server’s address, change the server to it.'));
   });
 
   // Jellio's service worker answers for the server while it's down, so

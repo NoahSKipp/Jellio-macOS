@@ -32,4 +32,19 @@ function isServerUrl(value, serverOrigin) {
   return Boolean(serverOrigin && url && /^https?:$/.test(url.protocol) && url.origin === serverOrigin);
 }
 
-module.exports = { isAppPage, isServerUrl };
+// 'allow' stays in the window, 'external' belongs in the browser.
+function navigationAction(value, serverOrigin, pagesDir) {
+  if (isServerUrl(value, serverOrigin) || isAppPage(value, pagesDir)) return 'allow';
+  const url = parse(value);
+  return url && /^https?:$/.test(url.protocol) ? 'external' : 'deny';
+}
+
+// Embeds such as the trailer player, never local files or app schemes.
+const SUBFRAME_SCHEMES = new Set(['http:', 'https:', 'about:', 'blob:', 'data:']);
+
+function subframeAllowed(value) {
+  const url = parse(value);
+  return Boolean(url && SUBFRAME_SCHEMES.has(url.protocol));
+}
+
+module.exports = { isAppPage, isServerUrl, navigationAction, subframeAllowed };
