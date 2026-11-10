@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 VERSION_FILE=package.json
 VERSION_PATTERN='"version": "'
-PATCH_FALLBACK=1
 read_version() { sed -n 's/^  "version": "\([^"]*\)".*/\1/p' "$VERSION_FILE"; }
 write_version() { npm version "$1" --no-git-tag-version --allow-same-version >/dev/null; }
 
@@ -55,14 +54,9 @@ else
   fi
   tag=$(git cliff --bumped-version 2>/dev/null)
   if [ -n "$last" ] && [ "$tag" = "$last" ]; then
-    if [ "$PATCH_FALLBACK" = 1 ]; then
-      # Commits marked [skip changelog] don't count toward git-cliff's bump,
-      # so a release made only of those would reuse the last tag.
-      tag=$(echo "$last" | awk -F. -v OFS=. '{$NF=$NF+1; print}')
-    else
-      echo "No commits since $last that change the version, nothing to release."
-      exit 0
-    fi
+    # Commits marked [skip changelog] don't count toward git-cliff's bump,
+    # so a release made only of those would reuse the last tag.
+    tag=$(echo "$last" | awk -F. -v OFS=. '{$NF=$NF+1; print}')
   fi
   if tag_exists "$tag"; then
     echo "$tag is already released, nothing to do."
