@@ -22,6 +22,7 @@ const updates = require('./updates');
 const { isBigRelease, MACOS_CHANGELOG_RELEASES } = require('./changelogData');
 const navigationPolicy = require('./lib/navigationPolicy');
 const serverAddress = require('./lib/serverAddress');
+const { MIN, isOnScreen, sanitizeBounds } = require('./lib/bounds');
 
 const PAGES_DIR = path.join(__dirname, 'pages');
 const SERVER_PERMISSIONS = [
@@ -286,18 +287,9 @@ function go(route) {
 }
 
 function savedBounds() {
-  const bounds = config.get('bounds');
-  if (!bounds) return { width: 1440, height: 900 };
-  const visible = screen.getAllDisplays().some((display) => {
-    const area = display.workArea;
-    return (
-      bounds.x < area.x + area.width &&
-      bounds.x + bounds.width > area.x &&
-      bounds.y < area.y + area.height &&
-      bounds.y + bounds.height > area.y
-    );
-  });
-  return visible ? bounds : { width: bounds.width, height: bounds.height };
+  const bounds = sanitizeBounds(config.get('bounds'));
+  const areas = screen.getAllDisplays().map((display) => display.workArea);
+  return isOnScreen(bounds, areas) ? bounds : { width: bounds.width, height: bounds.height };
 }
 
 function updateProgressBar() {
@@ -418,8 +410,8 @@ function createTray() {
 function createWindow() {
   win = new BrowserWindow({
     ...savedBounds(),
-    minWidth: 800,
-    minHeight: 560,
+    minWidth: MIN.width,
+    minHeight: MIN.height,
     show: false,
     title: 'Jellio',
     backgroundColor: '#141414',
