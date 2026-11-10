@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { app } = require('electron');
+const { backupsToPrune } = require('./lib/backups');
 
 const file = () => path.join(app.getPath('userData'), 'config.json');
 
@@ -55,6 +56,17 @@ function recoverFromTempFiles(filePath) {
   return recovered;
 }
 
+const KEEP_BACKUPS = 3;
+
+function pruneBackups(filePath) {
+  try {
+    const dir = path.dirname(filePath);
+    for (const name of backupsToPrune(fs.readdirSync(dir), path.basename(filePath), KEEP_BACKUPS)) {
+      fs.unlinkSync(path.join(dir, name));
+    }
+  } catch {}
+}
+
 function load() {
   if (data) return data;
   const filePath = file();
@@ -79,6 +91,7 @@ function load() {
   } else {
     data = recoverFromTempFiles(filePath) || {};
   }
+  pruneBackups(filePath);
   return data;
 }
 
