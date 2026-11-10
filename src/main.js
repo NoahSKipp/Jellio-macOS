@@ -6,7 +6,6 @@ const {
   Notification,
   Tray,
   dialog,
-  globalShortcut,
   ipcMain,
   nativeImage,
   nativeTheme,
@@ -603,19 +602,11 @@ function setActiveDownloads(count, progress) {
 function setPlaybackActiveState(active, title) {
   isPlaybackPlaying = !!active;
   currentMediaTitle = active ? (title || null) : null;
-  if (active) {
-    registerMediaShortcuts();
-    if (playbackBlockerId === null) {
-      playbackBlockerId = powerSaveBlocker.start('prevent-display-sleep');
-    }
-  } else {
-    unregisterMediaShortcuts();
-    if (playbackBlockerId !== null) {
-      if (powerSaveBlocker.isStarted(playbackBlockerId)) {
-        powerSaveBlocker.stop(playbackBlockerId);
-      }
-      playbackBlockerId = null;
-    }
+  if (active && playbackBlockerId === null) {
+    playbackBlockerId = powerSaveBlocker.start('prevent-display-sleep');
+  } else if (!active && playbackBlockerId !== null) {
+    if (powerSaveBlocker.isStarted(playbackBlockerId)) powerSaveBlocker.stop(playbackBlockerId);
+    playbackBlockerId = null;
   }
   updateTray();
 }
@@ -752,40 +743,6 @@ ipcMain.on('jellio:playback-state', (event, active, title) => {
   if (!fromServerPage(event)) return;
   setPlaybackActiveState(!!active, typeof title === 'string' ? title.slice(0, 200) : null);
 });
-
-function sendMediaAction(action) {
-  if (!win || win.isDestroyed()) return;
-  win.webContents
-    .executeJavaScript(
-      '((action) => {' +
-        '  const ev = new KeyboardEvent("keydown", { key: action, bubbles: true, cancelable: true });' +
-        '  document.dispatchEvent(ev);' +
-        '})(' +
-        JSON.stringify(action) +
-        ')',
-    )
-    .catch(() => {});
-}
-
-function registerMediaShortcuts() {
-  try {
-    globalShortcut.register('MediaPlayPause', () => sendMediaAction('MediaPlayPause'));
-    globalShortcut.register('MediaNextTrack', () => sendMediaAction('MediaNextTrack'));
-    globalShortcut.register('MediaPreviousTrack', () => sendMediaAction('MediaPreviousTrack'));
-  } catch (err) {
-    console.warn('Jellio: could not register global media shortcuts', err);
-  }
-}
-
-function unregisterMediaShortcuts() {
-  try {
-    globalShortcut.unregister('MediaPlayPause');
-    globalShortcut.unregister('MediaNextTrack');
-    globalShortcut.unregister('MediaPreviousTrack');
-  } catch (err) {
-    console.warn('Jellio: could not unregister global media shortcuts', err);
-  }
-}
 
 function buildMenu() {
   const history = () => win && !win.isDestroyed() && win.webContents.navigationHistory;
@@ -994,7 +951,6 @@ app.whenReady().then(() => {
 });
 
 app.on('will-quit', () => {
-  globalShortcut.unregisterAll();
   setPlaybackActiveState(false);
   if (tray) {
     tray.destroy();
