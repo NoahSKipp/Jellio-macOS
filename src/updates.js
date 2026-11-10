@@ -22,6 +22,7 @@ const AUTO_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 let state = { status: 'idle' };
 let busy = null;
+let checking = null;
 let installing = false;
 const listeners = new Set();
 
@@ -91,8 +92,17 @@ function notes(found) {
 
 // source: 'auto' asks only when there's something new, 'menu' always
 // answers with a dialog, 'settings' never shows one (the page does).
-async function checkForUpdates(window, source) {
-  if (busy) return getState();
+function checkForUpdates(window, source) {
+  if (busy) return Promise.resolve(getState());
+  if (!checking) {
+    checking = runCheck(window, source).finally(() => {
+      checking = null;
+    });
+  }
+  return checking;
+}
+
+async function runCheck(window, source) {
   if (source === 'auto') {
     if (!isAutomatic()) return getState();
     const last = config.get('lastUpdateCheck') || 0;
