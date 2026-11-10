@@ -55,7 +55,13 @@ Same hard rules as `NoahSKipp/Jellio-Plugin`, unchanged:
 ## Layout
 
 ```
-src/main.js       window, menu, navigation rules, server setup, quit guard
+src/main.js       app lifecycle, quit guard, startup
+src/app/          main process: window, menu, tray, deeplink, server
+                  (probe/connect/load), ipc, media, downloads state,
+                  navigation (policy wiring, IPC sender checks)
+src/lib/          pure logic with unit tests in test/: update, navigation
+                  and server address policy, window bounds, config backups
+src/assets/       menu bar template icon
 src/preload.js    jellioNative bridge, download count from IndexedDB
 src/config.js     settings JSON in userData
 src/updates.js    update check, download and install from GitHub releases
