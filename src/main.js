@@ -324,6 +324,28 @@ function toggleWindowVisibility() {
   updateTray();
 }
 
+function sendPlayback(command) {
+  if (win && !win.isDestroyed()) win.webContents.send('jellio:playback-command', command);
+}
+
+function checkForUpdatesItem() {
+  return { label: 'Check for Updates…', click: () => updates.checkForUpdates(win, 'menu') };
+}
+
+const NAV_ITEMS = [
+  { label: 'Home', accelerator: 'Cmd+Shift+H', route: 'home' },
+  { label: 'Search', accelerator: 'Cmd+F', route: 'search' },
+  { label: 'Downloads', accelerator: 'Cmd+Shift+D', route: 'downloads' },
+];
+
+function navItems(withAccelerators) {
+  return NAV_ITEMS.map(({ label, accelerator, route }) => ({
+    label,
+    ...(withAccelerators ? { accelerator } : {}),
+    click: () => go(route),
+  }));
+}
+
 function updateTray() {
   if (!tray) return;
 
@@ -347,30 +369,9 @@ function updateTray() {
       label: mediaLabel,
       enabled: false,
     },
-    {
-      label: isPlaybackPlaying ? 'Pause' : 'Play',
-      click: () => {
-        if (win && !win.isDestroyed()) {
-          win.webContents.send('jellio:playback-command', 'play-pause');
-        }
-      },
-    },
-    {
-      label: 'Next',
-      click: () => {
-        if (win && !win.isDestroyed()) {
-          win.webContents.send('jellio:playback-command', 'next');
-        }
-      },
-    },
-    {
-      label: 'Previous',
-      click: () => {
-        if (win && !win.isDestroyed()) {
-          win.webContents.send('jellio:playback-command', 'previous');
-        }
-      },
-    },
+    { label: isPlaybackPlaying ? 'Pause' : 'Play', click: () => sendPlayback('play-pause') },
+    { label: 'Next', click: () => sendPlayback('next') },
+    { label: 'Previous', click: () => sendPlayback('previous') },
     { type: 'separator' },
     {
       label: downloadSummary,
@@ -381,10 +382,7 @@ function updateTray() {
       label: isWinVisible ? 'Hide Jellio' : 'Show Jellio',
       click: () => toggleWindowVisibility(),
     },
-    {
-      label: 'Check for Updates…',
-      click: () => updates.checkForUpdates(win, 'menu'),
-    },
+    checkForUpdatesItem(),
     {
       label: 'Quit Jellio',
       click: () => {
@@ -738,18 +736,13 @@ ipcMain.on('jellio:playback-state', (event, active, title) => {
 
 function buildMenu() {
   const history = () => win && !win.isDestroyed() && win.webContents.navigationHistory;
-  const sendPlayback = (command) => {
-    if (win && !win.isDestroyed()) {
-      win.webContents.send('jellio:playback-command', command);
-    }
-  };
   const template = [
     {
       label: app.name,
       submenu: [
         { role: 'about' },
         { label: "What's New in Jellio…", click: () => showWhatsNewWindow() },
-        { label: 'Check for Updates…', click: () => updates.checkForUpdates(win, 'menu') },
+        checkForUpdatesItem(),
         { type: 'separator' },
         { label: 'Settings…', accelerator: 'Cmd+,', click: () => go('settings') },
         { label: 'Change Server…', click: () => win && !win.isDestroyed() && (win.show(), loadSetup()) },
@@ -840,16 +833,13 @@ function buildMenu() {
           click: () => history() && history().canGoForward() && history().goForward(),
         },
         { type: 'separator' },
-        { label: 'Home', accelerator: 'Cmd+Shift+H', click: () => go('home') },
-        { label: 'Search', accelerator: 'Cmd+F', click: () => go('search') },
-        { label: 'Downloads', accelerator: 'Cmd+Shift+D', click: () => go('downloads') },
+        ...navItems(true),
       ],
     },
     { role: 'windowMenu' },
     {
       role: 'help',
       submenu: [
-        { label: "What's New in Jellio…", click: () => showWhatsNewWindow() },
         { label: 'Jellio on GitHub', click: () => shell.openExternal('https://github.com/NoahSKipp/Jellio-macOS') },
         {
           label: 'Report an Issue',
@@ -864,9 +854,7 @@ function buildMenu() {
 function buildDockMenu() {
   if (!app.dock) return;
   const template = [
-    { label: 'Home', click: () => go('home') },
-    { label: 'Search', click: () => go('search') },
-    { label: 'Downloads', click: () => go('downloads') },
+    ...navItems(false),
     { type: 'separator' },
     { label: 'Settings…', click: () => go('settings') },
   ];
