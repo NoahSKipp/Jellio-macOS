@@ -35,3 +35,28 @@ test('parseChecksum rejects partial and malformed entries', () => {
   assert.strictEqual(policy.parseChecksum('abc  Jellio-1.2.3-arm64.zip', 'Jellio-1.2.3-arm64.zip'), null);
   assert.strictEqual(policy.parseChecksum('', 'Jellio-1.2.3-arm64.zip'), null);
 });
+
+test('isAllowedDownloadUrl accepts GitHub release hosts over https only', () => {
+  assert.ok(policy.isAllowedDownloadUrl('https://github.com/NoahSKipp/Jellio-macOS/releases/download/v1.2.3/a.zip'));
+  assert.ok(policy.isAllowedDownloadUrl('https://objects.githubusercontent.com/x'));
+  assert.ok(policy.isAllowedDownloadUrl('https://release-assets.githubusercontent.com/x?sig=1'));
+  assert.ok(!policy.isAllowedDownloadUrl('http://github.com/x'));
+  assert.ok(!policy.isAllowedDownloadUrl('https://github.com.evil.example/x'));
+  assert.ok(!policy.isAllowedDownloadUrl('https://evil.example/github.com'));
+  assert.ok(!policy.isAllowedDownloadUrl('https://user@github.com/x'));
+  assert.ok(!policy.isAllowedDownloadUrl('https://github.com:8443/x'));
+  assert.ok(!policy.isAllowedDownloadUrl('not a url'));
+  assert.ok(!policy.isAllowedDownloadUrl(undefined));
+});
+
+test('isReleaseAssetUrl pins the repository, tag and asset name', () => {
+  const name = 'Jellio-1.2.3-arm64.zip';
+  const good = 'https://github.com/NoahSKipp/Jellio-macOS/releases/download/v1.2.3/' + name;
+  assert.ok(policy.isReleaseAssetUrl(good, 'v1.2.3', name));
+  assert.ok(!policy.isReleaseAssetUrl(good, '1.2.3', name));
+  assert.ok(!policy.isReleaseAssetUrl(good, 'v1.2.3', 'Jellio-1.2.4-arm64.zip'));
+  assert.ok(!policy.isReleaseAssetUrl(good.replace('NoahSKipp/Jellio-macOS', 'someone/Jellio-macOS'), 'v1.2.3', name));
+  assert.ok(!policy.isReleaseAssetUrl(good + '?x=1', 'v1.2.3', name));
+  assert.ok(!policy.isReleaseAssetUrl(good.replace('https:', 'http:'), 'v1.2.3', name));
+  assert.ok(!policy.isReleaseAssetUrl('https://objects.githubusercontent.com/' + name, 'v1.2.3', name));
+});

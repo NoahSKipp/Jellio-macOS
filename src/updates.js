@@ -5,7 +5,15 @@ const path = require('path');
 const { execFile, spawn } = require('child_process');
 const { app, dialog, net, shell } = require('electron');
 const config = require('./config');
-const { checksumName, findAsset, parseChecksum, releaseVersion, zipName } = require('./lib/updatePolicy');
+const {
+  checksumName,
+  findAsset,
+  isAllowedDownloadUrl,
+  isReleaseAssetUrl,
+  parseChecksum,
+  releaseVersion,
+  zipName,
+} = require('./lib/updatePolicy');
 
 const LATEST = 'https://api.github.com/repos/NoahSKipp/Jellio-macOS/releases/latest';
 const AUTO_INTERVAL_MS = 6 * 60 * 60 * 1000;
@@ -147,19 +155,41 @@ function bundlePath() {
   return bundle;
 }
 
+const OFF_GITHUB = 'The update download isn’t coming from GitHub, so Jellio stopped it.';
+
+// Every hop, redirects included, has to stay on GitHub's release hosts.
+function get(url) {
+  return new Promise((resolve, reject) => {
+    if (!isAllowedDownloadUrl(url)) {
+      reject(new Error(OFF_GITHUB));
+      return;
+    }
+    const request = net.request({ url, redirect: 'manual', cache: 'no-store' });
+    request.setHeader('User-Agent', 'Jellio-macOS');
+    request.on('redirect', (_status, _method, location) => {
+      if (isAllowedDownloadUrl(location)) {
+        request.followRedirect();
+      } else {
+        reject(new Error(OFF_GITHUB));
+        request.abort();
+      }
+    });
+    request.on('response', resolve);
+    request.on('error', reject);
+    request.end();
+  });
+}
+
 async function download(asset, file, version) {
-  const response = await net.fetch(asset.browser_download_url, { headers: { 'User-Agent': 'Jellio-macOS' } });
-  if (!response.ok || !response.body) throw new Error('The download answered ' + response.status);
-  const total = Number(response.headers.get('content-length')) || asset.size || 0;
+  const response = await get(asset.browser_download_url);
+  if (response.statusCode !== 200) throw new Error('The download answered ' + response.statusCode);
+  const total = Number(response.headers['content-length']) || asset.size || 0;
   const out = fs.createWriteStream(file);
   const hash = crypto.createHash('sha256');
   let received = 0;
   let lastSent = 0;
-  const reader = response.body.getReader();
   try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    for await (const value of response) {
       const chunk = Buffer.from(value);
       hash.update(chunk);
       if (!out.write(chunk)) await new Promise((resolve) => out.once('drain', resolve));
@@ -178,11 +208,14 @@ async function download(asset, file, version) {
 const CHECKSUM_UNAVAILABLE = 'Jellio couldn’t get the checksum for this update, so it didn’t install it. Try again later.';
 
 async function expectedChecksum(sums, asset) {
-  let text;
+  let text = '';
   try {
-    const response = await net.fetch(sums.browser_download_url, { headers: { 'User-Agent': 'Jellio-macOS' }, cache: 'no-store' });
-    if (!response.ok) throw new Error('The checksum answered ' + response.status);
-    text = await response.text();
+    const response = await get(sums.browser_download_url);
+    if (response.statusCode !== 200) throw new Error('The checksum answered ' + response.statusCode);
+    for await (const chunk of response) {
+      text += Buffer.from(chunk).toString('utf8');
+      if (text.length > 65536) throw new Error('The checksum file is too large');
+    }
   } catch {
     throw new Error(CHECKSUM_UNAVAILABLE);
   }
@@ -218,6 +251,8 @@ async function installUpdate(window) {
     const asset = findAsset(found, zipName(version));
     const sums = findAsset(found, checksumName(version));
     const bundle = bundlePath();
+    if (asset && !isReleaseAssetUrl(asset.browser_download_url, found.tag_name, asset.name)) throw new Error(OFF_GITHUB);
+    if (sums && !isReleaseAssetUrl(sums.browser_download_url, found.tag_name, sums.name)) throw new Error(OFF_GITHUB);
     if (!asset || !sums || !bundle) {
       const reason = !asset
         ? 'This release has no app download yet. Try again in a few minutes.'

@@ -1,3 +1,27 @@
+const REPO_PATH = '/NoahSKipp/Jellio-macOS';
+const DOWNLOAD_HOSTS = new Set(['github.com', 'objects.githubusercontent.com', 'release-assets.githubusercontent.com']);
+
+function httpsUrl(value) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.username || url.password || url.port) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function isAllowedDownloadUrl(value) {
+  const url = httpsUrl(value);
+  return Boolean(url && DOWNLOAD_HOSTS.has(url.hostname));
+}
+
+function isReleaseAssetUrl(value, tag, name) {
+  const url = httpsUrl(value);
+  if (!url || url.hostname !== 'github.com' || url.search || url.hash) return false;
+  return url.pathname === REPO_PATH + '/releases/download/' + encodeURIComponent(tag) + '/' + encodeURIComponent(name);
+}
+
 function releaseVersion(release) {
   const version = String((release && release.tag_name) || '').replace(/^v/, '');
   return /^\d+\.\d+\.\d+$/.test(version) ? version : null;
@@ -25,4 +49,12 @@ function parseChecksum(text, name) {
   return null;
 }
 
-module.exports = { releaseVersion, zipName, checksumName, findAsset, parseChecksum };
+module.exports = {
+  isAllowedDownloadUrl,
+  isReleaseAssetUrl,
+  releaseVersion,
+  zipName,
+  checksumName,
+  findAsset,
+  parseChecksum,
+};
