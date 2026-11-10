@@ -73,7 +73,12 @@ function showWhatsNewWindow() {
       nodeIntegration: false,
     },
   });
-  whatsNewWin.loadFile(path.join(__dirname, 'pages', 'whatsnew.html'));
+  whatsNewWin.webContents.setWindowOpenHandler(({ url }) => {
+    if (navigationPolicy.popupOpensExternally(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  whatsNewWin.webContents.on('will-navigate', (event) => event.preventDefault());
+  whatsNewWin.loadFile(path.join(PAGES_DIR, 'whatsnew.html'));
   whatsNewWin.once('ready-to-show', () => {
     if (whatsNewWin && !whatsNewWin.isDestroyed()) {
       whatsNewWin.show();
