@@ -79,3 +79,18 @@ test('popupOpensExternally hands web and mail links to the system', () => {
   assert.ok(!policy.popupOpensExternally('javascript:alert(1)'));
   assert.ok(!policy.popupOpensExternally('x-apple.systempreferences:com.apple.preference'));
 });
+
+test('redirectAction lets the server hand off to an https sign-in page', () => {
+  const origin = 'https://jellyfin.example.com';
+  assert.strictEqual(policy.redirectAction('https://jellyfin.example.com/web/', origin, PAGES), 'allow');
+  assert.strictEqual(policy.redirectAction('https://auth.example.com/?rd=x', origin, PAGES), 'sign-in');
+  assert.strictEqual(policy.redirectAction('http://auth.example.com/', origin, PAGES), 'deny');
+  assert.strictEqual(policy.redirectAction('file:///etc/passwd', origin, PAGES), 'deny');
+});
+
+test('navigationAction keeps https sign-in steps in the app only while signing in', () => {
+  const origin = 'https://jellyfin.example.com';
+  assert.strictEqual(policy.navigationAction('https://auth.example.com/login', origin, PAGES, true), 'allow');
+  assert.strictEqual(policy.navigationAction('https://auth.example.com/login', origin, PAGES, false), 'external');
+  assert.strictEqual(policy.navigationAction('http://auth.example.com/login', origin, PAGES, true), 'external');
+});

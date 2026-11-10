@@ -73,8 +73,15 @@ function denyPopups(contents) {
 function guardNavigation(contents, onOffSiteRedirect) {
   denyPopups(contents);
 
+  // Set while a sign-in page the server redirected to is open; cleared once
+  // the server or an app page is back.
+  let signingIn = false;
+  contents.on('did-navigate', (_event, url) => {
+    if (navigationPolicy.navigationAction(url, serverOrigin(), PAGES_DIR) === 'allow') signingIn = false;
+  });
+
   contents.on('will-navigate', (event) => {
-    const action = navigationPolicy.navigationAction(event.url, serverOrigin(), PAGES_DIR);
+    const action = navigationPolicy.navigationAction(event.url, serverOrigin(), PAGES_DIR, signingIn);
     if (action === 'allow') return;
     event.preventDefault();
     if (action === 'external') shell.openExternal(event.url);
@@ -91,7 +98,12 @@ function guardNavigation(contents, onOffSiteRedirect) {
       if (!navigationPolicy.subframeAllowed(event.url)) event.preventDefault();
       return;
     }
-    if (navigationPolicy.navigationAction(event.url, serverOrigin(), PAGES_DIR) === 'allow') return;
+    const action = navigationPolicy.redirectAction(event.url, serverOrigin(), PAGES_DIR);
+    if (action === 'allow') return;
+    if (action === 'sign-in') {
+      signingIn = true;
+      return;
+    }
     event.preventDefault();
     let target = event.url;
     try {

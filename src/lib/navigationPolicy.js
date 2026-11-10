@@ -33,10 +33,21 @@ function isServerUrl(value, serverOrigin) {
 }
 
 // 'allow' stays in the window, 'external' belongs in the browser.
-function navigationAction(value, serverOrigin, pagesDir) {
+// While a sign-in page in front of the server (Authelia, Authentik, an
+// identity provider) is open, its own https steps stay in the app.
+function navigationAction(value, serverOrigin, pagesDir, signingIn = false) {
   if (isServerUrl(value, serverOrigin) || isAppPage(value, pagesDir)) return 'allow';
   const url = parse(value);
+  if (signingIn && url && url.protocol === 'https:') return 'allow';
   return url && /^https?:$/.test(url.protocol) ? 'external' : 'deny';
+}
+
+// The server may send the app to a sign-in page over https and get it back
+// afterwards; anything else off the server is refused.
+function redirectAction(value, serverOrigin, pagesDir) {
+  if (isServerUrl(value, serverOrigin) || isAppPage(value, pagesDir)) return 'allow';
+  const url = parse(value);
+  return url && url.protocol === 'https:' ? 'sign-in' : 'deny';
 }
 
 // Embeds such as the trailer player, never local files or app schemes.
@@ -53,4 +64,4 @@ function popupOpensExternally(value) {
   return Boolean(url && /^(https?|mailto):$/.test(url.protocol));
 }
 
-module.exports = { isAppPage, isServerUrl, navigationAction, popupOpensExternally, subframeAllowed };
+module.exports = { isAppPage, isServerUrl, navigationAction, popupOpensExternally, redirectAction, subframeAllowed };
