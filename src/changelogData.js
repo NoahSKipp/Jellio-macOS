@@ -19,7 +19,6 @@ const MACOS_CHANGELOG_RELEASES = [
     version: '0.7.1',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.7.1',
-    summary: 'Non-intrusive playback shortcuts, active media key scoping, deep link protocol packaging, and tray menu refinements.',
     highlights: [
       {
         title: 'Offline Screen Reconnection & Auto-Recovery',
@@ -43,7 +42,6 @@ const MACOS_CHANGELOG_RELEASES = [
     version: '0.7.0',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.7.0',
-    summary: 'Native macOS playback menu, menu bar status item, deep linking, Dock progress bar, and atomic configuration.',
     highlights: [
       {
         title: 'Native Playback Menu',
@@ -71,7 +69,6 @@ const MACOS_CHANGELOG_RELEASES = [
     version: '0.6.2',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.6.2',
-    summary: 'Jellyfin now shows the right app and version for this Mac.',
     highlights: [
       {
         title: 'Correct Version in Jellyfin',
@@ -83,7 +80,6 @@ const MACOS_CHANGELOG_RELEASES = [
     version: '0.6.1',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.6.1',
-    summary: 'Jellio opens faster.',
     highlights: [
       {
         title: 'Faster Start',
@@ -99,7 +95,6 @@ const MACOS_CHANGELOG_RELEASES = [
     version: '0.6.0',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.6.0',
-    summary: "Native What's New window with complete version history and menu integration.",
     highlights: [
       {
         title: 'Native Expandable Version History',
@@ -119,7 +114,6 @@ const MACOS_CHANGELOG_RELEASES = [
     version: '0.5.0',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.5.0',
-    summary: 'Global media keys, display sleep prevention, and Apple Silicon hardware decoding.',
     highlights: [
       {
         title: 'Global Media Keys',
@@ -139,7 +133,6 @@ const MACOS_CHANGELOG_RELEASES = [
     version: '0.4.1',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.4.1',
-    summary: 'Direct network routing fix.',
     highlights: [
       {
         title: 'Direct Network Routing',
@@ -151,7 +144,6 @@ const MACOS_CHANGELOG_RELEASES = [
     version: '0.4.0',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.4.0',
-    summary: 'Native dock menu, download badges, and quit protection.',
     highlights: [
       {
         title: 'Native Dock Menu & Alerts',
@@ -167,7 +159,6 @@ const MACOS_CHANGELOG_RELEASES = [
     version: '0.3.0',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.3.0',
-    summary: 'HEVC offline downloads support.',
     highlights: [
       {
         title: 'HEVC Offline Downloads',
@@ -179,7 +170,6 @@ const MACOS_CHANGELOG_RELEASES = [
     version: '0.2.0',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.2.0',
-    summary: 'In-app updater.',
     highlights: [
       {
         title: 'In-App Automatic Updates',
@@ -191,7 +181,6 @@ const MACOS_CHANGELOG_RELEASES = [
     version: '0.1.0',
     title: "What's New in Jellio for macOS",
     subtitle: 'Version 0.1.0',
-    summary: 'Initial macOS desktop release.',
     highlights: [
       {
         title: 'Native macOS App',
