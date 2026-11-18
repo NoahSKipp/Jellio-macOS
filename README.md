@@ -1,10 +1,16 @@
-# Jellio for macOS
+<p align="center">
+  <img src="src/pages/mark.svg" width="140" alt="Jellio for macOS">
+</p>
 
-Jellio in its own Mac app. It opens your Jellyfin server's Jellio web
-client in a native window, keeps running (and downloading) in the Dock,
-and opens your downloads when the server can't be reached.
+<h1 align="center">Jellio for macOS</h1>
 
-Requires macOS 12 or later on Apple Silicon (M1 and newer). Tested for
+<p align="center">
+  Jellio in its own native Apple Silicon Mac app. Opens your Jellyfin server's<br>
+  Jellio client in a native window, keeps downloads running in the Dock,<br>
+  and drops straight into your offline library when the server can't be reached.
+</p>
+
+Requires macOS 12 or later on Apple Silicon (M1 and newer). Tested on
 macOS Sequoia.
 
 ## Install
@@ -27,17 +33,27 @@ macOS Sequoia.
 
 ## Features
 
-- Your server's Jellio client, with its service worker and offline
-  downloads (books, manga, audiobooks, films and episodes).
-- Opens straight into your downloads when the server is down.
-- Closing the window keeps Jellio in the Dock so downloads keep going. The
-  Dock icon shows how many are running, and quitting asks first.
-- Media keys and Now Playing, native full screen, trackpad swipe back and
-  forward.
-- Go menu: Back `⌘[`, Forward `⌘]`, Home `⇧⌘H`, Search `⌘F`,
-  Downloads `⇧⌘D`. Settings `⌘,`.
-- Checks GitHub for a new version shortly after launch and every 6 hours
-  while it runs (turn it off in Settings > About).
+- **Full Jellio client & offline downloads**: runs your server's Jellio web
+  client with its Service Worker cache and download manager for movies,
+  episodes, books, manga, and audiobooks (including HEVC video downloads),
+  and opens straight into your downloads when the server is unreachable.
+- **Dock & menu bar integration**: closing the window keeps Jellio running in
+  the Dock so active downloads finish, with a Dock badge, live Dock and window
+  progress bars, quit confirmation while downloads are active, and a menu bar
+  status item with quick playback controls.
+- **Native macOS playback & navigation**: Playback and Go menus (`⌘[` Back,
+  `⌘]` Forward, `⇧⌘H` Home, `⌘F` Search, `⇧⌘D` Downloads, `⌘,` Settings),
+  hardware media keys and macOS Now Playing integration, Picture-in-Picture,
+  native fullscreen, automatic display sleep prevention during video playback,
+  two-finger trackpad swipe navigation, and `jellio://` / `jellyfin://` deep
+  links.
+- **SSO login & hardened security**: external HTTPS Single Sign-On flows
+  (Authelia, Authentik, and reverse-proxy auth) alongside strict origin
+  isolation and permission sandboxing.
+- **Verified in-app updates**: checks GitHub for new releases on launch and
+  every 6 hours in the background (configurable in **Settings > About**),
+  verifies SHA-256 checksums and code signatures before installing, and shows
+  release notes in a native What's New window, and much more.
 
 ## Build
 
